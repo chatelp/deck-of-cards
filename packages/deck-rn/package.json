@@ -1,0 +1,33 @@
+{
+  "name": "@deck/rn",
+  "version": "0.1.0",
+  "description": "React Native bindings for deck of cards animations",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-native": "^0.74.3",
+    "react-native-reanimated": "^3.6.0"
+  },
+  "dependencies": {
+    "@deck/core": "workspace:*",
+    "tslib": "^2.6.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-native": "0.73.0",
+    "react-native-gesture-handler": "^2.15.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "license": "MIT"
+}

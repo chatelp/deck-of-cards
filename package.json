@@ -1,48 +1,24 @@
 {
-  "name": "deck-of-cards",
-  "version": "0.1.9",
-  "description": "HTML5 Deck of Cards",
-  "main": "dist/deck.min.js",
-  "module": "lib/deck.js",
-  "jsnext:main": "lib/deck.js",
-  "scripts": {
-    "start": "node index",
-    "build-js": "rollup --name Deck -f iife lib/deck.js | babel -o dist/deck.js && uglifyjs dist/deck.js -cmo dist/deck.min.js",
-    "build-css": "stylus -u nib css/index.styl -o example/example.css",
-    "build-html": "jade -P views/index.jade -o example/",
-    "postversion": "git push --tags",
-    "postinstall": "opencollective-postinstall || true"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pakastin/deck-of-cards.git"
-  },
-  "keywords": [
-    "html5",
-    "deck",
-    "of",
-    "cards"
+  "name": "deck-of-cards-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Modernized, cross-platform Deck of Cards monorepo",
+  "packageManager": "pnpm@9.6.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
   ],
-  "author": "Juha Lindstedt",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/pakastin/deck-of-cards/issues"
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
   },
-  "homepage": "https://github.com/pakastin/deck-of-cards#readme",
   "devDependencies": {
-    "babel": "^5.8.23",
-    "chokidar": "^1.0.5",
-    "jade": "^1.11.0",
-    "nib": "^1.1.0",
-    "rollup": "^0.16.4",
-    "stylus": "^0.52.0",
-    "uglify-js": "^2.4.24"
-  },
-  "dependencies": {
-    "opencollective-postinstall": "^2.0.2"
-  },
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/deck-of-cards"
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.18",
+    "turbo": "^2.1.0",
+    "typescript": "^5.5.4"
   }
 }
