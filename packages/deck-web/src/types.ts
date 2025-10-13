@@ -6,6 +6,7 @@ import {
   CardState,
   CardTransform
 } from '@deck/core';
+import { WebMotionDriver } from './drivers/WebMotionDriver';
 
 export interface CardRenderProps {
   state: CardState;
@@ -24,6 +25,7 @@ export interface CardViewProps {
   onSelect?: () => void;
   renderFace: (props: CardRenderProps) => ReactNode;
   renderBack: (props: CardRenderProps) => ReactNode;
+  driver?: WebMotionDriver;
 }
 
 export interface DeckViewActions {

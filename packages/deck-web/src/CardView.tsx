@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useCallback, useEffect } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
 import { CardViewProps } from './types';
 
 export const CardView: React.FC<CardViewProps> = ({
@@ -9,8 +9,31 @@ export const CardView: React.FC<CardViewProps> = ({
   onFlip,
   onSelect,
   renderFace,
-  renderBack
+  renderBack,
+  driver
 }) => {
+  const controls = useAnimationControls();
+
+  useEffect(() => {
+    if (driver) {
+      driver.register(state.id, controls, state.faceUp);
+      return () => {
+        driver.unregister(state.id);
+      };
+    }
+    return undefined;
+  }, [driver, controls, state.id]);
+
+  useEffect(() => {
+    void controls.start({
+      x: layout.x,
+      y: layout.y,
+      rotate: layout.rotation,
+      scale: layout.scale,
+      transition: { type: 'spring', stiffness: 240, damping: 20 }
+    });
+  }, [layout, controls]);
+
   const handleClick = useCallback((): void => {
     onSelect?.();
   }, [onSelect]);
@@ -39,13 +62,14 @@ export const CardView: React.FC<CardViewProps> = ({
         padding: 0,
         cursor: 'pointer'
       }}
-      animate={{
+      animate={controls}
+      initial={{
         x: layout.x,
         y: layout.y,
         rotate: layout.rotation,
-        scale: layout.scale
+        scale: layout.scale,
+        rotateY: state.faceUp ? 180 : 0
       }}
-      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
     >
       <motion.div
         style={{
@@ -55,7 +79,9 @@ export const CardView: React.FC<CardViewProps> = ({
           background: '#fff',
           boxShadow: isSelected ? '0 12px 24px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.1)',
           backfaceVisibility: 'hidden',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          transformStyle: 'preserve-3d',
+          perspective: 1000
         }}
       >
         {content}

@@ -84,7 +84,10 @@ export function flip(deck, cardId, options = {}) {
                     easing: options.easing ?? 'easeInOut'
                 }
             }
-        ]
+        ],
+        meta: {
+            type: 'flip'
+        }
     };
     return { deck: updatedDeck, sequence };
 }

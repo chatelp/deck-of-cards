@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo } from 'react';
-import { AnimationDriver, CardData, CardLayout, DeckState, NoopAnimationDriver, useDeck } from '@deck/core';
+import { AnimationDriver, CardData, CardLayout, DeckState, useDeck } from '@deck/core';
 import { CardView } from './CardView';
 import { CardAnimationTarget, DeckViewProps } from './types';
+import { WebMotionDriver } from './drivers/WebMotionDriver';
 
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
@@ -16,7 +17,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   className
 }) => {
   const animationDriver: AnimationDriver = useMemo(
-    () => driver ?? new NoopAnimationDriver(),
+    () => driver ?? new WebMotionDriver(),
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver);
@@ -47,6 +48,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
           state={card}
           layout={layout[card.id] as CardLayout}
           isSelected={selectedIds.includes(card.id)}
+          driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
           onFlip={async () => {
             await flip(card.id);
             onFlipCard?.(card.id, !card.faceUp);

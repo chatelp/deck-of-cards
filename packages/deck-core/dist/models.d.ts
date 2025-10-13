@@ -47,7 +47,11 @@ export interface AnimationStep {
 export interface AnimationSequence {
     steps: AnimationStep[];
     stagger?: number;
+    meta?: AnimationSequenceMeta;
 }
+export type AnimationSequenceMeta = undefined | {
+    type: 'flip';
+};
 export interface FanOptions {
     origin?: Vector2;
     spreadAngle?: number;

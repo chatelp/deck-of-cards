@@ -1,7 +1,6 @@
-export * from './models';
-export * from './layout';
-export * from './state';
-export * from './primitives';
-export * from './useDeck';
-export * from './drivers';
-export * from './observable';
+export { createDeckState, updateCardState, updateCardLayout, setDeckPositions, setDeckConfig, getHandOrigin } from './state.js';
+export { computeFanLayout, computeStackLayout, computeLineLayout } from './layout.js';
+export { fan, stack, shuffle, animateTo, flip } from './primitives.js';
+export { useDeck } from './useDeck.js';
+export { NoopAnimationDriver } from './drivers.js';
+export { DeckObservable } from './observable.js';

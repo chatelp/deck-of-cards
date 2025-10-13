@@ -103,7 +103,10 @@ export function flip(deck: DeckState, cardId: CardId, options: FlipOptions = {})
           easing: options.easing ?? 'easeInOut'
         }
       }
-    ]
+    ],
+    meta: {
+      type: 'flip'
+    }
   };
   return { deck: updatedDeck, sequence };
 }
