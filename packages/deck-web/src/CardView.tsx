@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { CardViewProps } from './types';
+import { WebMotionDriver } from './drivers/WebMotionDriver';
 
 export const CardView: React.FC<CardViewProps> = ({
   state,
@@ -13,16 +14,18 @@ export const CardView: React.FC<CardViewProps> = ({
   driver
 }) => {
   const controls = useAnimationControls();
+  const frontContent = renderBack({ state, data: state.data!, layout, isSelected });
+  const backContent = renderFace({ state, data: state.data!, layout, isSelected });
 
   useEffect(() => {
-    if (driver) {
+    if (driver instanceof WebMotionDriver) {
       driver.register(state.id, controls, state.faceUp);
       return () => {
         driver.unregister(state.id);
       };
     }
     return undefined;
-  }, [driver, controls, state.id]);
+  }, [driver, controls, state.id, state.faceUp]);
 
   useEffect(() => {
     void controls.start({
@@ -30,37 +33,36 @@ export const CardView: React.FC<CardViewProps> = ({
       y: layout.y,
       rotate: layout.rotation,
       scale: layout.scale,
+      rotateY: state.faceUp ? 180 : 0,
       transition: { type: 'spring', stiffness: 240, damping: 20 }
     });
-  }, [layout, controls]);
+  }, [layout, controls, state.faceUp]);
 
-  const handleClick = useCallback((): void => {
-    onSelect?.();
-  }, [onSelect]);
-
-  const handleDoubleClick = useCallback((): void => {
-    onFlip?.();
-  }, [onFlip]);
-
-  const content = state.faceUp
-    ? renderFace({ state, data: state.data!, layout, isSelected })
-    : renderBack({ state, data: state.data!, layout, isSelected });
+  const handleClick = useCallback(async (): Promise<void> => {
+    if (state.selected) {
+      return;
+    }
+    await onFlip?.();
+    await onSelect?.();
+  }, [state.selected, onFlip, onSelect]);
 
   return (
     <motion.button
       type="button"
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
-      className="deck-card"
+      className="deck-card card-3d-wrapper"
       style={{
         position: 'absolute',
+        left: '50%',
+        top: '50%',
         width: 160,
         height: 240,
         borderRadius: 12,
         background: 'transparent',
         border: 'none',
         padding: 0,
-        cursor: 'pointer'
+        cursor: state.selected ? 'default' : 'pointer',
+        zIndex: isSelected ? layout.zIndex + 1000 : layout.zIndex
       }}
       animate={controls}
       initial={{
@@ -71,21 +73,8 @@ export const CardView: React.FC<CardViewProps> = ({
         rotateY: state.faceUp ? 180 : 0
       }}
     >
-      <motion.div
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: 12,
-          background: '#fff',
-          boxShadow: isSelected ? '0 12px 24px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.1)',
-          backfaceVisibility: 'hidden',
-          overflow: 'hidden',
-          transformStyle: 'preserve-3d',
-          perspective: 1000
-        }}
-      >
-        {content}
-      </motion.div>
+      <div className="card-side card-side-front">{frontContent}</div>
+      <div className="card-side card-side-back">{backContent}</div>
     </motion.button>
   );
 };

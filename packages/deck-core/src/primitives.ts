@@ -7,16 +7,17 @@ import {
   ShuffleOptions
 } from './models';
 import { computeFanLayout, computeStackLayout } from './layout';
-import { setDeckPositions, updateCardState } from './state';
+import { setDeckPositions, updateCardState, updateCardLayout } from './state';
 import { shuffleArray } from './shuffle';
 
 export function fan(deck: DeckState): { deck: DeckState; sequence: AnimationSequence } {
   const layouts = computeFanLayout(deck);
   const sequence: AnimationSequence = {
-    steps: Object.entries(layouts).map(([cardId, target]) => ({
+    steps: Object.entries(layouts).map(([cardId, target], index) => ({
       cardId,
-      target: { ...target, duration: 400, easing: 'easeOut' }
-    }))
+      target: { ...target, duration: 400, easing: 'easeOut', delay: index * 15 }
+    })),
+    stagger: 15
   };
   return {
     deck: setDeckPositions(deck, layouts),
@@ -71,7 +72,7 @@ export function animateTo(
 ): { deck: DeckState; sequence: AnimationSequence } {
   const { duration = target.duration, easing = target.easing, delay = target.delay } = options;
   return {
-    deck,
+    deck: updateCardLayout(deck, cardId, target),
     sequence: {
       steps: [
         {

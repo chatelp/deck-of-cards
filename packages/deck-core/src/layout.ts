@@ -3,21 +3,23 @@ import { getHandOrigin } from './state';
 
 export function computeFanLayout(deck: DeckState, options: FanOptions = {}): Record<CardId, CardLayout> {
   const { cards, config } = deck;
-  const origin = options.origin ?? { x: 0, y: 0 };
+  const defaultOrigin = { x: 0, y: deck.config.fanRadius * 0.6 };
+  const origin = options.origin ?? defaultOrigin;
   const spreadAngle = options.spreadAngle ?? config.fanAngle;
   const radius = options.radius ?? config.fanRadius;
   const middle = (cards.length - 1) / 2;
 
   const layouts: Record<CardId, CardLayout> = {};
+  const step = cards.length > 1 ? spreadAngle / (cards.length - 1) : 0;
   cards.forEach((card, index) => {
-    const angleOffset = (index - middle) * (spreadAngle / Math.max(cards.length - 1, 1));
-    const rad = angleOffset;
-    const x = origin.x + radius * Math.sin(rad);
-    const y = origin.y - radius * (1 - Math.cos(rad));
+    const angleOffset = -spreadAngle / 2 + step * index - Math.PI / 2;
+    const x = origin.x + radius * Math.cos(angleOffset);
+    const y = origin.y + radius * Math.sin(angleOffset);
+    const rotation = (angleOffset * 180) / Math.PI + 90;
     layouts[card.id] = {
       x,
       y,
-      rotation: (rad * 180) / Math.PI,
+      rotation,
       scale: 1,
       zIndex: index
     };

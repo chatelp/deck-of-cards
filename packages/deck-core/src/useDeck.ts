@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import {
   AnimationDriver,
   CardData,
   CardId,
   DeckEvent,
   DeckEventName,
-  DeckState
+  DeckState,
+  DeckStateConfig
 } from './models';
 import { DeckObservable } from './observable';
 import { createDeckState, setDeckPositions, updateCardLayout, updateCardState } from './state';
@@ -27,10 +28,16 @@ function deckReducer(state: DeckState, action: DeckReducerAction): DeckState {
   }
 }
 
-export function useDeck(cards: CardData[], driver: AnimationDriver) {
-  const initialState = useMemo(() => createDeckState(cards), [cards]);
+export function useDeck(cards: CardData[], driver: AnimationDriver, config?: DeckStateConfig) {
+  const initialState = useMemo(() => createDeckState(cards, config), [cards, config?.drawLimit, config?.fanAngle, config?.fanRadius, config?.spacing, config?.seed]);
   const [deck, dispatch] = useReducer(deckReducer, initialState);
   const observable = useMemo(() => new DeckObservable(), []);
+
+  // When the cards input changes (e.g., deck size changes), rebuild the deck state
+  useEffect(() => {
+    const next = createDeckState(cards, deck.config);
+    dispatch({ type: 'SET_STATE', payload: next });
+  }, [cards]);
 
   const applySequence = useCallback(
     async (nextDeck: DeckState, sequence: ReturnType<typeof fan>['sequence']) => {
@@ -79,9 +86,22 @@ export function useDeck(cards: CardData[], driver: AnimationDriver) {
 
   const selectCard = useCallback(
     async (cardId: CardId) => {
-      const nextDeck = updateCardState(deck, cardId, { selected: !deck.cards.find((card) => card.id === cardId)?.selected });
+      const currentCard = deck.cards.find((card) => card.id === cardId);
+      if (!currentCard) {
+        return;
+      }
+
+      const selectedCount = deck.cards.filter((card) => card.selected).length;
+      const isCurrentlySelected = currentCard.selected;
+      const drawLimit = deck.config.drawLimit ?? 2;
+
+      if (!isCurrentlySelected && selectedCount >= drawLimit) {
+        return;
+      }
+
+      const nextDeck = updateCardState(deck, cardId, { selected: !isCurrentlySelected });
       dispatch({ type: 'SET_STATE', payload: nextDeck });
-      observable.emit({ type: 'select', payload: { cardId } });
+      observable.emit({ type: 'select', payload: { cardId, selected: !isCurrentlySelected } });
     },
     [deck]
   );

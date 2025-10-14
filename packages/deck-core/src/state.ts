@@ -1,10 +1,11 @@
 import { CardData, CardId, CardLayout, CardState, DeckState, DeckStateConfig, Vector2 } from './models';
 
 const defaultConfig: Required<DeckStateConfig> = {
-  fanAngle: Math.PI / 2,
-  fanRadius: 180,
+  fanAngle: Math.PI,
+  fanRadius: 240,
   spacing: 24,
-  seed: Date.now()
+  seed: Date.now(),
+  drawLimit: 2
 };
 
 export function createDeckState(cards: CardData[], config: DeckStateConfig = {}): DeckState {

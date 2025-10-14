@@ -1,2 +1,18 @@
-node_modules
-npm-debug.log
+node_modules/
+npm-debug.log*
+*.log
+*.tsbuildinfo
+
+# Next.js outputs
+apps/web/.next/
+apps/web/out/
+
+# Package build outputs
+packages/*/dist/
+dist/
+
+# Turbo cache
+.turbo/
+
+# OS files
+.DS_Store

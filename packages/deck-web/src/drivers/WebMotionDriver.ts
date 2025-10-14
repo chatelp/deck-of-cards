@@ -49,6 +49,7 @@ export class WebMotionDriver implements AnimationDriver {
         y: target.y,
         rotate: target.rotation,
         scale: target.scale,
+        rotateY: entry.isFaceUp ? 180 : 0,
         transition
       });
 

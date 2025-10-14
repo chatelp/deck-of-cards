@@ -6,7 +6,6 @@ import {
   CardState,
   CardTransform
 } from '@deck/core';
-import { WebMotionDriver } from './drivers/WebMotionDriver';
 
 export interface CardRenderProps {
   state: CardState;
@@ -25,7 +24,7 @@ export interface CardViewProps {
   onSelect?: () => void;
   renderFace: (props: CardRenderProps) => ReactNode;
   renderBack: (props: CardRenderProps) => ReactNode;
-  driver?: WebMotionDriver;
+  driver?: AnimationDriver;
 }
 
 export interface DeckViewActions {
@@ -43,6 +42,7 @@ export interface DeckViewProps {
   selectedIds?: string[];
   onSelectCard?: (cardId: string) => void;
   onFlipCard?: (cardId: string, faceUp: boolean) => void;
+  drawLimit?: number;
   renderCardFace: (props: CardRenderProps) => ReactNode;
   renderCardBack: (props: CardRenderProps) => ReactNode;
   autoFan?: boolean;

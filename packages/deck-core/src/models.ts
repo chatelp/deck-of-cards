@@ -46,6 +46,7 @@ export interface DeckStateConfig {
   fanRadius?: number;
   spacing?: number;
   seed?: number;
+  drawLimit?: number;
 }
 
 export interface DeckState {
@@ -94,7 +95,7 @@ export interface FlipOptions {
 }
 
 export interface DeckEventMap {
-  select: { cardId: CardId };
+  select: { cardId: CardId; selected: boolean };
   flip: { cardId: CardId; faceUp: boolean };
   shuffle: { order: CardId[] };
   fan: { layouts: Record<CardId, CardLayout> };

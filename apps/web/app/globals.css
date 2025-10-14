@@ -1,3 +1,42 @@
+.card-3d-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.3);
+  transform-style: preserve-3d;
+}
+
+.card-side {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  backface-visibility: hidden;
+}
+
+.card-side-front {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(160deg, #f8fafc 0%, #dbeafe 100%);
+  color: #1f2937;
+}
+
+.card-side-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(160deg, #1f2937 0%, #0f172a 100%);
+  color: #f9fafb;
+  transform: rotateY(180deg);
+}
 html, body {
   margin: 0;
   padding: 0;
@@ -58,6 +97,23 @@ button:active {
 .demo-controls {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.deck-size-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f9fafb;
+}
+
+.deck-size-picker select {
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
 }
 
 .demo-main {
@@ -138,6 +194,32 @@ button:active {
 .card-back {
   background: linear-gradient(160deg, #1f2937 0%, #0f172a 100%);
   color: #f9fafb;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-back-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+  border: 6px solid rgba(248, 250, 252, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.card-back-logo {
+  font-size: 48px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.8);
+}
+
+.card-back-text {
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.6);
 }
 
 .card-hexagram {

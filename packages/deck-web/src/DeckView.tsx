@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { AnimationDriver, CardData, CardLayout, DeckState, useDeck } from '@deck/core';
 import { CardView } from './CardView';
 import { CardAnimationTarget, DeckViewProps } from './types';
@@ -10,6 +10,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   selectedIds = [],
   onSelectCard,
   onFlipCard,
+  drawLimit,
   renderCardFace,
   renderCardBack,
   autoFan = false,
@@ -20,14 +21,28 @@ export const DeckView: React.FC<DeckViewProps> = ({
     () => driver ?? new WebMotionDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver);
+  const deckHook = useDeck(cards, animationDriver, { drawLimit });
   const { deck, fan, shuffle, resetStack, flip, selectCard, animateTo } = deckHook;
 
+  const fanRef = useRef(fan);
   useEffect(() => {
-    if (autoFan) {
-      void fan();
+    fanRef.current = fan;
+  }, [fan]);
+
+  useEffect(() => {
+    if (!autoFan) {
+      return;
     }
-  }, [autoFan, fan]);
+    fanRef.current();
+  }, [autoFan, cards.length]);
+
+  // When the effective deck size changes, re-fan to update layout visually
+  useEffect(() => {
+    if (!autoFan) {
+      return;
+    }
+    void fan();
+  }, [autoFan, deck.cards.length, fan]);
 
   useEffect(() => {
     if (onDeckReady) {

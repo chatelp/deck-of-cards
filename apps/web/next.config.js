@@ -1,6 +1,7 @@
 const path = require('path');
 
 module.exports = {
+  transpilePackages: ['@deck/web', '@deck/core'],
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
