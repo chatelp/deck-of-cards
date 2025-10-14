@@ -13,6 +13,10 @@ Modern cross-platform reimplementation of Juha Lindstedt's Deck of Cards for Rea
 - `apps/mobile` – Expo app showcasing the deck experience on iOS/Android
 - `apps/web` – Next.js app previewing the web experience via `@deck/web`
 
+## Legacy Source
+
+- `legacy/` – original DOM/CSS implementation from Juha Lindstedt's Deck of Cards. Kept for reference; not used by the modern TypeScript/React codebase.
+
 ## Getting Started
 
 ```bash
