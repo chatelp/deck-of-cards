@@ -179,6 +179,8 @@ export default function Page() {
   const [deckSize, setDeckSize] = useState<number>(10);
   const [drawLimit, setDrawLimit] = useState<number>(2);
   const [cardsSeed, setCardsSeed] = useState<number>(0);
+  type LayoutMode = 'fan' | 'stack';
+  const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
@@ -193,6 +195,7 @@ export default function Page() {
     if (cardsSeed === 0) {
       const newSeed = Date.now();
       setCardsSeed(newSeed);
+      setDesiredLayout('fan');
       setTimeout(() => {
         actionsRef.current?.resetStack();
         actionsRef.current?.fan();
@@ -206,10 +209,42 @@ export default function Page() {
     setDrawnCards([]);
     setFaceUp({});
     setSelected(null);
+    setDesiredLayout('fan');
     setTimeout(() => {
       actionsRef.current?.resetStack();
       actionsRef.current?.fan();
     }, 60);
+  }, []);
+
+  const applyDesiredLayout = useCallback(async () => {
+    const actions = actionsRef.current;
+    if (!actions) {
+      return;
+    }
+    if (desiredLayout === 'fan') {
+      await actions.fan();
+    } else if (desiredLayout === 'stack') {
+      await actions.resetStack();
+    }
+  }, [desiredLayout]);
+
+  const handleShuffle = useCallback(async () => {
+    const actions = actionsRef.current;
+    if (!actions) {
+      return;
+    }
+    await actions.shuffle();
+    await applyDesiredLayout();
+  }, [applyDesiredLayout]);
+
+  const handleFan = useCallback(() => {
+    setDesiredLayout('fan');
+    void actionsRef.current?.fan();
+  }, []);
+
+  const handleStack = useCallback(() => {
+    setDesiredLayout('stack');
+    void actionsRef.current?.resetStack();
   }, []);
 
   const handleDeckStateChange = useCallback((state: DeckState) => {
@@ -238,13 +273,13 @@ export default function Page() {
       </header>
 
       <section className="demo-controls">
-        <button type="button" onClick={() => actionsRef.current?.shuffle()}>
+        <button type="button" onClick={handleShuffle}>
           Shuffle
         </button>
-        <button type="button" onClick={() => actionsRef.current?.fan()}>
+        <button type="button" onClick={handleFan}>
           Fan
         </button>
-        <button type="button" onClick={() => actionsRef.current?.resetStack()}>
+        <button type="button" onClick={handleStack}>
           Stack
         </button>
         <button type="button" onClick={handleRestart}>
@@ -260,6 +295,7 @@ export default function Page() {
               setFaceUp({});
               setDrawnCards([]);
               setDeckSize(nextSize);
+              setDesiredLayout('fan');
               setTimeout(() => {
                 actionsRef.current?.resetStack();
                 actionsRef.current?.fan();
@@ -283,6 +319,7 @@ export default function Page() {
               setSelected(null);
               setDrawnCards([]);
               setFaceUp({});
+              setDesiredLayout('fan');
             }}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((limitOption) => (
