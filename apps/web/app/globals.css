@@ -216,9 +216,6 @@ button:active {
   width: 100%;
 }
 
-.selected-clear {
-  background: rgba(148,163,184,0.2);
-}
 
 .deck-summary h2,
 .deck-selected h3 {
@@ -242,12 +239,6 @@ button:active {
 .selected-meaning {
   color: rgba(249, 250, 251, 0.7);
   margin-top: 4px;
-}
-
-.selected-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
 }
 
 .card-face,

@@ -11,6 +11,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   onSelectCard,
   onDrawCard,
   onFlipCard,
+  onDeckStateChange,
   drawLimit,
   renderCardFace,
   renderCardBack,
@@ -56,6 +57,10 @@ export const DeckView: React.FC<DeckViewProps> = ({
       });
     }
   }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
+
+  useEffect(() => {
+    onDeckStateChange?.(deck);
+  }, [deck, onDeckStateChange]);
 
   const layout: DeckState['positions'] = deck.positions;
 

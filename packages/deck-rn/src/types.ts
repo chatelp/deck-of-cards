@@ -4,7 +4,8 @@ import {
   CardData,
   CardLayout,
   CardState,
-  CardTransform
+  CardTransform,
+  DeckState
 } from '@deck/core';
 import { StyleProp, ViewStyle } from 'react-native';
 
@@ -45,6 +46,7 @@ export interface DeckViewProps {
   onSelectCard?: (cardId: string, selected: boolean) => void;
   onDrawCard?: (card: CardState) => void;
   onFlipCard?: (cardId: string, faceUp: boolean) => void;
+  onDeckStateChange?: (state: DeckState) => void;
   renderCardFace: (props: CardRenderProps) => ReactNode;
   renderCardBack: (props: CardRenderProps) => ReactNode;
   layoutMode?: 'stack' | 'fan' | 'grid';

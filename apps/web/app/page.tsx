@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeckView, DeckViewActions } from '@deck/web';
-import { CardData, CardState } from '@deck/core';
+import { CardData, CardState, DeckState } from '@deck/core';
 
 interface YiJingCard extends CardData {
   hexagram: string;
@@ -178,7 +178,7 @@ export default function Page() {
   const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
   const [deckSize, setDeckSize] = useState<number>(10);
   const [drawLimit, setDrawLimit] = useState<number>(2);
-  const [cardsSeed, setCardsSeed] = useState<number>(() => Date.now());
+  const [cardsSeed, setCardsSeed] = useState<number>(0);
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
@@ -188,6 +188,17 @@ export default function Page() {
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selected) ?? null;
   const drawLimitReached = drawnCards.length >= drawLimit;
+
+  useEffect(() => {
+    if (cardsSeed === 0) {
+      const newSeed = Date.now();
+      setCardsSeed(newSeed);
+      setTimeout(() => {
+        actionsRef.current?.resetStack();
+        actionsRef.current?.fan();
+      }, 60);
+    }
+  }, [cardsSeed]);
 
   const handleRestart = useCallback(() => {
     const newSeed = Date.now();
@@ -199,6 +210,18 @@ export default function Page() {
       actionsRef.current?.resetStack();
       actionsRef.current?.fan();
     }, 60);
+  }, []);
+
+  const handleDeckStateChange = useCallback((state: DeckState) => {
+    setDrawnCards(state.drawnCards);
+    const nextFaceUp: Record<string, boolean> = {};
+    state.cards.forEach((card) => {
+      nextFaceUp[card.id] = card.faceUp;
+    });
+    state.drawnCards.forEach((card) => {
+      nextFaceUp[card.id] = card.faceUp;
+    });
+    setFaceUp(nextFaceUp);
   }, []);
 
   useEffect(() => {
@@ -292,8 +315,8 @@ export default function Page() {
                 return [...prev, card];
               });
               setSelected(card.id);
-              setFaceUp((prev) => ({ ...prev, [card.id]: true }));
             }}
+            onDeckStateChange={handleDeckStateChange}
             renderCardFace={({ data }) => (
               <div className="card-face">
                 <span className="card-hexagram">{(data as YiJingCard).hexagram}</span>
@@ -327,7 +350,7 @@ export default function Page() {
           </div>
           <div className="insight-item">
             <span className="insight-label">Face up</span>
-            <span className="insight-value">{faceUpCount}</span>
+            <span className="insight-value">{faceUpCount} / {cards.length}</span>
           </div>
         </div>
 
@@ -361,7 +384,6 @@ export default function Page() {
               <span className="selected-hexagram">{(selectedCard.data as YiJingCard | undefined)?.hexagram}</span>
               <span className="selected-title">{(selectedCard.data as YiJingCard | undefined)?.name}</span>
               <span className="selected-meaning">{(selectedCard.data as YiJingCard | undefined)?.meaning}</span>
-              <button type="button" onClick={() => setSelected(null)} className="selected-clear">Clear</button>
             </div>
           ) : null}
         </div>

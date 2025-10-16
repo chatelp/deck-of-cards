@@ -4,7 +4,8 @@ import {
   CardData,
   CardLayout,
   CardState,
-  CardTransform
+  CardTransform,
+  DeckState
 } from '@deck/core';
 
 export interface CardRenderProps {
@@ -44,6 +45,7 @@ export interface DeckViewProps {
   onSelectCard?: (cardId: string, selected: boolean) => void;
   onDrawCard?: (card: CardState) => void;
   onFlipCard?: (cardId: string, faceUp: boolean) => void;
+  onDeckStateChange?: (state: DeckState) => void;
   drawLimit?: number;
   renderCardFace: (props: CardRenderProps) => ReactNode;
   renderCardBack: (props: CardRenderProps) => ReactNode;
