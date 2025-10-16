@@ -1,4 +1,4 @@
-import { CardData, CardId, CardLayout, CardState, DeckState, DeckStateConfig, Vector2 } from './models';
+import { CardData, CardId, CardLayout, CardState, DeckLayoutMode, DeckState, DeckStateConfig, Vector2 } from './models';
 
 const defaultConfig: Required<DeckStateConfig> = {
   fanAngle: Math.PI,
@@ -31,8 +31,10 @@ export function createDeckState(cards: CardData[], config: DeckStateConfig = {})
 
   return {
     cards: cardStates,
+    drawnCards: [],
     positions,
-    config: mergedConfig
+    config: mergedConfig,
+    layoutMode: 'stack'
   };
 }
 
@@ -58,6 +60,10 @@ export function setDeckPositions(deck: DeckState, positions: Record<CardId, Card
 
 export function setDeckConfig(deck: DeckState, config: DeckStateConfig): DeckState {
   return { ...deck, config: { ...deck.config, ...config } };
+}
+
+export function setDeckLayoutMode(deck: DeckState, layoutMode: DeckLayoutMode): DeckState {
+  return { ...deck, layoutMode };
 }
 
 export function getHandOrigin(size: number, index: number, spacing: number, origin: Vector2 = { x: 0, y: 0 }): Vector2 {

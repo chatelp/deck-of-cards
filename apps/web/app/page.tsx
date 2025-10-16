@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeckView, DeckViewActions } from '@deck/web';
-import { CardData } from '@deck/core';
+import { CardData, CardState } from '@deck/core';
 
 interface YiJingCard extends CardData {
   hexagram: string;
@@ -150,14 +150,62 @@ const allYiJingCards: YiJingCard[] = Array.from({ length: 64 }).map((_, index) =
   meaning: yiJingMeanings[index]
 }));
 
+function seededRandom(seed: number): () => number {
+  let value = seed % 2147483647;
+  if (value <= 0) {
+    value += 2147483646;
+  }
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+}
+
+function shuffleWithSeed<T>(source: T[], seed: number): T[] {
+  const result = [...source];
+  const random = seededRandom(seed);
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 export default function Page() {
   const actionsRef = useRef<DeckViewActions | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
+  const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
   const [deckSize, setDeckSize] = useState<number>(10);
   const [drawLimit, setDrawLimit] = useState<number>(2);
+  const [cardsSeed, setCardsSeed] = useState<number>(() => Date.now());
 
-  const cards = useMemo(() => allYiJingCards.slice(0, deckSize), [deckSize]);
+  const cards = useMemo(() => {
+    const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
+    return shuffled.slice(0, deckSize);
+  }, [deckSize, cardsSeed]);
+  const remainingCount = cards.length - drawnCards.length;
+  const faceUpCount = Object.values(faceUp).filter(Boolean).length;
+  const selectedCard = drawnCards.find((card) => card.id === selected) ?? null;
+  const drawLimitReached = drawnCards.length >= drawLimit;
+
+  const handleRestart = useCallback(() => {
+    const newSeed = Date.now();
+    setCardsSeed(newSeed);
+    setDrawnCards([]);
+    setFaceUp({});
+    setSelected(null);
+    setTimeout(() => {
+      actionsRef.current?.resetStack();
+      actionsRef.current?.fan();
+    }, 60);
+  }, []);
+
+  useEffect(() => {
+    if (selected && !drawnCards.some((card) => card.id === selected)) {
+      setSelected(null);
+    }
+  }, [drawnCards, selected]);
 
   return (
     <main className="demo-root">
@@ -176,6 +224,9 @@ export default function Page() {
         <button type="button" onClick={() => actionsRef.current?.resetStack()}>
           Stack
         </button>
+        <button type="button" onClick={handleRestart}>
+          Restart
+        </button>
         <label className="deck-size-picker">
           Deck size:
           <select
@@ -184,6 +235,7 @@ export default function Page() {
               const nextSize = Number(event.target.value);
               setSelected(null);
               setFaceUp({});
+              setDrawnCards([]);
               setDeckSize(nextSize);
               setTimeout(() => {
                 actionsRef.current?.resetStack();
@@ -206,6 +258,8 @@ export default function Page() {
               const nextLimit = Number(event.target.value);
               setDrawLimit(nextLimit);
               setSelected(null);
+              setDrawnCards([]);
+              setFaceUp({});
             }}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((limitOption) => (
@@ -223,16 +277,22 @@ export default function Page() {
             key={deckSize}
             cards={cards}
             autoFan
-            selectedIds={selected ? [selected] : []}
             drawLimit={drawLimit}
             onDeckReady={(actions) => {
               actionsRef.current = actions;
             }}
-            onSelectCard={(cardId) => {
-              setSelected((current) => (current === cardId ? current : cardId));
-            }}
             onFlipCard={(cardId, isFaceUp) => {
               setFaceUp((prev) => ({ ...prev, [cardId]: isFaceUp }));
+            }}
+            onDrawCard={(card) => {
+              setDrawnCards((prev) => {
+                if (prev.some((existing) => existing.id === card.id)) {
+                  return prev;
+                }
+                return [...prev, card];
+              });
+              setSelected(card.id);
+              setFaceUp((prev) => ({ ...prev, [card.id]: true }));
             }}
             renderCardFace={({ data }) => (
               <div className="card-face">
@@ -252,33 +312,59 @@ export default function Page() {
           />
         </div>
 
-        <aside className="deck-panel">
-          <div className="deck-summary">
-            <h2>Deck Insights</h2>
-            <p>Total cards: {cards.length}</p>
-            <p>Face up: {Object.values(faceUp).filter(Boolean).length}</p>
+        <div className="deck-insights">
+          <div className="insight-item">
+            <span className="insight-label">Initial</span>
+            <span className="insight-value">{cards.length}</span>
           </div>
-          <div className="deck-selected">
-            <h3>Selected Card</h3>
-            {selected ? (
-              <div>
-                <p className="selected-hexagram">{cards.find((card) => card.id === selected)?.hexagram}</p>
-                <p className="selected-title">{cards.find((card) => card.id === selected)?.name}</p>
-                <p className="selected-meaning">{cards.find((card) => card.id === selected)?.meaning}</p>
-                <div className="selected-actions">
-                  <button type="button" onClick={() => actionsRef.current?.flip(selected)}>
-                    Flip
-                  </button>
-                  <button type="button" onClick={() => setSelected(null)}>
-                    Clear selection
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p>No card selected</p>
-            )}
+          <div className="insight-item">
+            <span className="insight-label">Remaining</span>
+            <span className="insight-value">{remainingCount}</span>
           </div>
-        </aside>
+          <div className="insight-item">
+            <span className="insight-label">Drawn</span>
+            <span className="insight-value">{drawnCards.length} / {drawLimit}</span>
+          </div>
+          <div className="insight-item">
+            <span className="insight-label">Face up</span>
+            <span className="insight-value">{faceUpCount}</span>
+          </div>
+        </div>
+
+        <div className="deck-drawn-inline">
+          {drawnCards.length ? (
+            <ul className="drawn-card-list-inline">
+              {drawnCards.map((card) => {
+                const data = card.data as YiJingCard | undefined;
+                return (
+                  <li key={card.id}>
+                    <button
+                      type="button"
+                      className={`drawn-card-button${selected === card.id ? ' is-active' : ''}`}
+                      onClick={() => setSelected(card.id)}
+                      title={data?.name}
+                    >
+                      <span className="drawn-hexagram">{data?.hexagram}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="drawn-empty">No cards drawn yet</p>
+          )}
+        </div>
+
+        <div className="deck-selected-inline">
+          {selectedCard ? (
+            <div className="selected-inline">
+              <span className="selected-hexagram">{(selectedCard.data as YiJingCard | undefined)?.hexagram}</span>
+              <span className="selected-title">{(selectedCard.data as YiJingCard | undefined)?.name}</span>
+              <span className="selected-meaning">{(selectedCard.data as YiJingCard | undefined)?.meaning}</span>
+              <button type="button" onClick={() => setSelected(null)} className="selected-clear">Clear</button>
+            </div>
+          ) : null}
+        </div>
       </section>
     </main>
   );

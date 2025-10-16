@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import {
   AnimationDriver,
   CardData,
   CardLayout,
+  CardState,
   DeckState,
   NoopAnimationDriver,
   useDeck
@@ -14,8 +15,9 @@ import { CardAnimationTarget, DeckViewProps } from './types';
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
   driver,
-  selectedIds = [],
+  selectedIds,
   onSelectCard,
+  onDrawCard,
   onFlipCard,
   renderCardFace,
   renderCardBack,
@@ -28,22 +30,36 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver);
-  const { deck, fan, shuffle, resetStack, flip, selectCard, animateTo } = deckHook;
+  const { deck, fan, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
 
+  const lastFannedLengthRef = useRef<number | null>(null);
   useEffect(() => {
-    if (autoFan) {
-      void fan();
+    if (!autoFan) {
+      return;
     }
-  }, [autoFan, fan]);
+    if (lastFannedLengthRef.current === deck.cards.length) {
+      return;
+    }
+    lastFannedLengthRef.current = deck.cards.length;
+    void fan();
+  }, [autoFan, deck.cards.length, fan]);
 
   useEffect(() => {
     if (onDeckReady) {
       const wrappedAnimateTo = async (cardId: string, target: CardAnimationTarget) => {
         await animateTo(cardId, target);
       };
-      onDeckReady({ fan, shuffle, flip, animateTo: wrappedAnimateTo, selectCard, resetStack });
+      onDeckReady({
+        fan,
+        shuffle,
+        flip,
+        animateTo: wrappedAnimateTo,
+        selectCard,
+        drawCard,
+        resetStack
+      });
     }
-  }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, resetStack]);
+  }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
 
   const layout: DeckState['positions'] = deck.positions;
 
@@ -54,14 +70,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
           key={card.id}
           state={card}
           layout={layout[card.id] as CardLayout}
-          isSelected={selectedIds.includes(card.id)}
+          isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
           onFlip={async () => {
             await flip(card.id);
             onFlipCard?.(card.id, !card.faceUp);
           }}
-          onSelect={() => {
-            selectCard(card.id);
-            onSelectCard?.(card.id);
+          onSelect={async () => {
+            const drawn = await drawCard(card.id);
+            if (drawn) {
+              onSelectCard?.(card.id, true);
+              onDrawCard?.(drawn as CardState);
+            }
           }}
           renderFace={renderCardFace}
           renderBack={renderCardBack}

@@ -17,6 +17,13 @@
       "esnext"
     ],
     "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@deck/core": ["../../packages/deck-core/dist/index.d.ts"],
+      "@deck/core/*": ["../../packages/deck-core/dist/*"],
+      "@deck/web": ["../../packages/deck-web/dist/index.d.ts"],
+      "@deck/web/*": ["../../packages/deck-web/dist/*"]
+    },
     "plugins": [
       {
         "name": "next"

@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { CardViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
+
+const CARD_WIDTH = 160;
+const CARD_HEIGHT = 240;
 
 export const CardView: React.FC<CardViewProps> = ({
   state,
@@ -16,6 +19,11 @@ export const CardView: React.FC<CardViewProps> = ({
   const controls = useAnimationControls();
   const frontContent = renderBack({ state, data: state.data!, layout, isSelected });
   const backContent = renderFace({ state, data: state.data!, layout, isSelected });
+  const centeredLayout = useMemo(() => ({
+    ...layout,
+    x: layout.x - CARD_WIDTH / 2,
+    y: layout.y - CARD_HEIGHT / 2
+  }), [layout]);
 
   useEffect(() => {
     if (driver instanceof WebMotionDriver) {
@@ -29,22 +37,26 @@ export const CardView: React.FC<CardViewProps> = ({
 
   useEffect(() => {
     void controls.start({
-      x: layout.x,
-      y: layout.y,
-      rotate: layout.rotation,
-      scale: layout.scale,
+      x: centeredLayout.x,
+      y: centeredLayout.y,
+      rotate: centeredLayout.rotation,
+      scale: centeredLayout.scale,
       rotateY: state.faceUp ? 180 : 0,
       transition: { type: 'spring', stiffness: 240, damping: 20 }
     });
-  }, [layout, controls, state.faceUp]);
+  }, [centeredLayout, controls, state.faceUp]);
 
   const handleClick = useCallback(async (): Promise<void> => {
-    if (state.selected) {
+    if (isSelected) {
       return;
     }
-    await onFlip?.();
-    await onSelect?.();
-  }, [state.selected, onFlip, onSelect]);
+    try {
+      await onFlip?.();
+    } catch (error) {
+      console.error('[CardView] flip error', error);
+      throw error;
+    }
+  }, [isSelected, onFlip, state.id, state.faceUp]);
 
   return (
     <motion.button
@@ -55,21 +67,21 @@ export const CardView: React.FC<CardViewProps> = ({
         position: 'absolute',
         left: '50%',
         top: '50%',
-        width: 160,
-        height: 240,
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
         borderRadius: 12,
         background: 'transparent',
         border: 'none',
         padding: 0,
-        cursor: state.selected ? 'default' : 'pointer',
+        cursor: isSelected ? 'default' : 'pointer',
         zIndex: isSelected ? layout.zIndex + 1000 : layout.zIndex
       }}
       animate={controls}
       initial={{
-        x: layout.x,
-        y: layout.y,
-        rotate: layout.rotation,
-        scale: layout.scale,
+        x: centeredLayout.x,
+        y: centeredLayout.y,
+        rotate: centeredLayout.rotation,
+        scale: centeredLayout.scale,
         rotateY: state.faceUp ? 180 : 0
       }}
     >

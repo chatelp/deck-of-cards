@@ -3,6 +3,7 @@ import {
   AnimationDriver,
   CardData,
   CardId,
+  CardState,
   DeckEvent,
   DeckEventName,
   DeckState,
@@ -29,15 +30,22 @@ function deckReducer(state: DeckState, action: DeckReducerAction): DeckState {
 }
 
 export function useDeck(cards: CardData[], driver: AnimationDriver, config?: DeckStateConfig) {
-  const initialState = useMemo(() => createDeckState(cards, config), [cards, config?.drawLimit, config?.fanAngle, config?.fanRadius, config?.spacing, config?.seed]);
+  const normalizedConfig = useMemo(() => {
+    if (!config) {
+      return undefined;
+    }
+    return { ...config } as DeckStateConfig;
+  }, [config?.drawLimit, config?.fanAngle, config?.fanRadius, config?.spacing, config?.seed]);
+
+  const initialState = useMemo(() => createDeckState(cards, normalizedConfig), [cards, normalizedConfig]);
   const [deck, dispatch] = useReducer(deckReducer, initialState);
   const observable = useMemo(() => new DeckObservable(), []);
 
-  // When the cards input changes (e.g., deck size changes), rebuild the deck state
+  // When the cards input changes (e.g., deck size changes) or config changes, rebuild the deck state
   useEffect(() => {
-    const next = createDeckState(cards, deck.config);
+    const next = createDeckState(cards, normalizedConfig);
     dispatch({ type: 'SET_STATE', payload: next });
-  }, [cards]);
+  }, [cards, normalizedConfig]);
 
   const applySequence = useCallback(
     async (nextDeck: DeckState, sequence: ReturnType<typeof fan>['sequence']) => {
@@ -85,25 +93,67 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
   );
 
   const selectCard = useCallback(
-    async (cardId: CardId) => {
+    async (cardId: CardId): Promise<boolean | undefined> => {
       const currentCard = deck.cards.find((card) => card.id === cardId);
       if (!currentCard) {
-        return;
+        return undefined;
       }
 
-      const selectedCount = deck.cards.filter((card) => card.selected).length;
+      const selectedCount = deck.cards.filter((card) => card.selected).length + deck.drawnCards.length;
       const isCurrentlySelected = currentCard.selected;
       const drawLimit = deck.config.drawLimit ?? 2;
 
       if (!isCurrentlySelected && selectedCount >= drawLimit) {
-        return;
+        return undefined;
       }
 
-      const nextDeck = updateCardState(deck, cardId, { selected: !isCurrentlySelected });
+      const nextSelected = !isCurrentlySelected;
+      const nextDeck = updateCardState(deck, cardId, { selected: nextSelected });
       dispatch({ type: 'SET_STATE', payload: nextDeck });
-      observable.emit({ type: 'select', payload: { cardId, selected: !isCurrentlySelected } });
+      observable.emit({ type: 'select', payload: { cardId, selected: nextSelected } });
+      return nextSelected;
     },
     [deck]
+  );
+
+  const drawCard = useCallback(
+    async (cardId: CardId): Promise<CardState | undefined> => {
+      const cardIndex = deck.cards.findIndex((card) => card.id === cardId);
+      if (cardIndex === -1) {
+        console.warn('[useDeck] drawCard:missing-card', { cardId });
+        return undefined;
+      }
+
+      if (deck.drawnCards.length >= deck.config.drawLimit) {
+        console.warn('[useDeck] drawCard:limit-reached', {
+          cardId,
+          drawnCount: deck.drawnCards.length,
+          limit: deck.config.drawLimit
+        });
+        return undefined;
+      }
+
+      const card = deck.cards[cardIndex];
+      const remainingCards = deck.cards.filter((c) => c.id !== cardId);
+      const { [cardId]: _removed, ...restPositions } = deck.positions;
+      const drawnCard: CardState = { ...card, faceUp: true, selected: true };
+
+      const baseDeck: DeckState = {
+        ...deck,
+        cards: remainingCards,
+        positions: restPositions,
+        drawnCards: [...deck.drawnCards, drawnCard]
+      };
+
+      const { deck: nextDeck, sequence } = fan(baseDeck);
+      dispatch({ type: 'SET_STATE', payload: nextDeck });
+      void driver.play(sequence).catch((error) => {
+        console.error('[useDeck] drawCard animation error', error);
+      });
+      observable.emit({ type: 'draw', payload: { cardId, card: drawnCard } });
+      return drawnCard;
+    },
+    [deck, applySequence]
   );
 
   const setLayout = useCallback(
@@ -134,6 +184,7 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     flip,
     animateTo,
     selectCard,
+    drawCard,
     setLayout,
     resetStack,
     setPositions,

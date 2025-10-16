@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { AnimationDriver, CardData, CardLayout, DeckState, useDeck } from '@deck/core';
+import { AnimationDriver, CardData, CardLayout, CardState, DeckState, useDeck } from '@deck/core';
 import { CardView } from './CardView';
 import { CardAnimationTarget, DeckViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
@@ -7,8 +7,9 @@ import { WebMotionDriver } from './drivers/WebMotionDriver';
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
   driver,
-  selectedIds = [],
+  selectedIds,
   onSelectCard,
+  onDrawCard,
   onFlipCard,
   drawLimit,
   renderCardFace,
@@ -22,25 +23,20 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit });
-  const { deck, fan, shuffle, resetStack, flip, selectCard, animateTo } = deckHook;
+  const { deck, fan, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
 
-  const fanRef = useRef(fan);
-  useEffect(() => {
-    fanRef.current = fan;
-  }, [fan]);
+  // Initial fan is handled by the next effect on first render (cards.length stable)
 
-  useEffect(() => {
-    if (!autoFan) {
-      return;
-    }
-    fanRef.current();
-  }, [autoFan, cards.length]);
-
-  // When the effective deck size changes, re-fan to update layout visually
+  // Re-fan when the number of cards in the deck changes (e.g., draw/remove)
+  const lastFannedLengthRef = useRef<number | null>(null);
   useEffect(() => {
     if (!autoFan) {
       return;
     }
+    if (lastFannedLengthRef.current === deck.cards.length) {
+      return;
+    }
+    lastFannedLengthRef.current = deck.cards.length;
     void fan();
   }, [autoFan, deck.cards.length, fan]);
 
@@ -49,9 +45,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
       const wrappedAnimateTo = async (cardId: string, target: CardAnimationTarget) => {
         await animateTo(cardId, target);
       };
-      onDeckReady({ fan, shuffle, flip, animateTo: wrappedAnimateTo, selectCard, resetStack });
+      onDeckReady({
+        fan,
+        shuffle,
+        flip,
+        animateTo: wrappedAnimateTo,
+        selectCard,
+        drawCard,
+        resetStack
+      });
     }
-  }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, resetStack]);
+  }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
 
   const layout: DeckState['positions'] = deck.positions;
 
@@ -62,16 +66,30 @@ export const DeckView: React.FC<DeckViewProps> = ({
           key={card.id}
           state={card}
           layout={layout[card.id] as CardLayout}
-          isSelected={selectedIds.includes(card.id)}
+          isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
           driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
           onFlip={async () => {
-            await flip(card.id);
-            onFlipCard?.(card.id, !card.faceUp);
+            void flip(card.id)
+              .then(() => {
+                onFlipCard?.(card.id, !card.faceUp);
+              })
+              .catch((error) => {
+                console.error('[DeckView] flip error', error);
+              });
+            setTimeout(() => {
+              void drawCard(card.id)
+                .then((drawn) => {
+                  if (drawn) {
+                    onSelectCard?.(card.id, true);
+                    onDrawCard?.(drawn as CardState);
+                  }
+                })
+                .catch((error) => {
+                  console.error('[DeckView] draw error', error);
+                });
+            }, 220);
           }}
-          onSelect={() => {
-            selectCard(card.id);
-            onSelectCard?.(card.id);
-          }}
+          onSelect={undefined}
           renderFace={renderCardFace}
           renderBack={renderCardBack}
         />

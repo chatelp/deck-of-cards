@@ -118,30 +118,106 @@ button:active {
 
 .demo-main {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   width: 100%;
   max-width: 1100px;
+  margin: 0 auto;
 }
 
 .deck-container {
-  flex: 1;
-  min-height: 440px;
+  width: min(100%, 900px);
+  aspect-ratio: 5 / 3;
+  margin: 0 auto;
   background: rgba(15, 23, 42, 0.6);
   border-radius: 24px;
   padding: 24px;
   position: relative;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.deck-panel {
-  width: 320px;
+.deck-insights {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
   background: rgba(30, 41, 59, 0.6);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.5);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.4);
+  width: min(100%, 900px);
+}
+
+.insight-item {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 10px;
+}
+
+.insight-label {
+  color: rgba(226, 232, 240, 0.75);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.insight-value {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.deck-drawn-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 900px);
+}
+
+.drawn-card-list-inline {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.drawn-empty {
+  color: rgba(226,232,240,0.7);
+}
+
+.deck-selected-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 900px);
+}
+
+.selected-inline {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.5);
+  padding: 10px 14px;
+  border-radius: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.selected-clear {
+  background: rgba(148,163,184,0.2);
 }
 
 .deck-summary h2,
@@ -244,6 +320,77 @@ button:active {
 .card-back-subtitle {
   font-size: 14px;
   color: rgba(248, 250, 252, 0.7);
+}
+
+.draw-limit-notice {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #facc15;
+}
+
+.deck-drawn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawn-card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drawn-card-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.drawn-card-list-inline .drawn-card-button {
+  width: auto;
+  padding: 8px 12px;
+}
+
+.drawn-card-button:hover {
+  border-color: rgba(96, 165, 250, 0.6);
+  transform: translateY(-1px);
+}
+
+.drawn-card-button.is-active {
+  border-color: rgba(96, 165, 250, 0.9);
+  background: rgba(30, 64, 175, 0.4);
+}
+
+.drawn-hexagram {
+  font-size: 36px;
+}
+
+.drawn-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.drawn-title {
+  font-weight: 600;
+}
+
+.drawn-meaning {
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.7);
 }
 
 @media (max-width: 960px) {

@@ -21,22 +21,39 @@ Modern cross-platform reimplementation of Juha Lindstedt's Deck of Cards. The go
 
 ```bash
 pnpm install
-pnpm dev       # runs all app/package dev scripts via TurboRepo
+
+# Full dev (all workspaces that define a `dev` script)
+pnpm dev
+
+# Web‑only dev (best for the Next.js demo):
+pnpm dev:web
 ```
 
-To run individual targets:
+What the dev scripts do:
+
+- Packages export compiled bundles from `dist/` (no direct `.ts` imports at runtime).
+- `pnpm dev` / `pnpm dev:web` run `tsc -b --watch` in `@deck/core` and `@deck/web` so `dist/` is kept in sync while Next.js serves the app.
+- No manual rebuild is required during development. For a clean build:
+  - `pnpm --filter @deck/* build`
+
+To run individual targets explicitly:
 
 ```bash
-pnpm --filter deck-mobile dev   # Expo dev client (React Native)
-pnpm --filter deck-web-app dev  # Next.js web app (Framer Motion bindings)
-pnpm --filter @deck/core build  # Build shared core
+pnpm --filter deck-web-app dev   # Next.js web app (Framer Motion bindings)
+pnpm --filter deck-mobile dev    # Expo dev client (React Native)
+pnpm --filter @deck/core build   # Build shared core
 ```
 
 ### Development Tips
 
-- With `transpilePackages` enabled in `apps/web/next.config.js`, changes under `packages/@deck/core/src/**` and `packages/@deck/web/src/**` hot-reload automatically while running `pnpm --filter deck-web-app dev`.
-- Use Turborepo commands (`pnpm dev`, `pnpm build`, etc.) to orchestrate builds across the monorepo.
+- Packages export `dist/` and are kept in sync by `tsc -b --watch` when using `pnpm dev` / `pnpm dev:web`.
+- Use the provided scripts (`pnpm dev`, `pnpm dev:web`, `pnpm build`) to orchestrate builds across the monorepo.
+- If the web app shows stale behavior, ensure `pnpm dev:web` is running (you should see watchers for `@deck/core` and `@deck/web` plus `next dev`). If needed, clear `apps/web/.next` and restart.
 - Legacy sources remain in `legacy/` if you need to reference the original DOM implementation.
+
+### Interaction model (web demo)
+
+- Click a card: it flips, then is removed from the deck and appended to the “Drawn Cards” list (draw limit enforced by the core).
 
 ## Architecture Overview
 

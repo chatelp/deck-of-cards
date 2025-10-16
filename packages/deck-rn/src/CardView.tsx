@@ -26,8 +26,11 @@ export const CardView: React.FC<CardViewProps> = ({
   }, [layout, rotation, translateX, translateY, scale]);
 
   const handlePress = useCallback(() => {
+    if (isSelected) {
+      return;
+    }
     onSelect?.();
-  }, [onSelect]);
+  }, [isSelected, onSelect]);
 
   const handleLongPress = useCallback(() => {
     onFlip?.();

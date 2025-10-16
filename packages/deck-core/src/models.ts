@@ -49,10 +49,14 @@ export interface DeckStateConfig {
   drawLimit?: number;
 }
 
+export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'custom';
+
 export interface DeckState {
   cards: CardState[];
+  drawnCards: CardState[];
   positions: Record<CardId, CardLayout>;
   config: Required<DeckStateConfig>;
+  layoutMode: DeckLayoutMode;
 }
 
 export interface AnimationStep {
@@ -99,6 +103,7 @@ export interface DeckEventMap {
   flip: { cardId: CardId; faceUp: boolean };
   shuffle: { order: CardId[] };
   fan: { layouts: Record<CardId, CardLayout> };
+  draw: { cardId: CardId; card: CardState };
 }
 
 export type DeckEventName = keyof DeckEventMap;

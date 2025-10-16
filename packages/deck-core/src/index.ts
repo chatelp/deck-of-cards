@@ -8,6 +8,7 @@ export type {
   EasingName,
   DeckStateConfig,
   DeckState,
+  DeckLayoutMode,
   AnimationStep,
   AnimationSequence,
   FanOptions,
@@ -26,6 +27,7 @@ export {
   updateCardLayout,
   setDeckPositions,
   setDeckConfig,
+  setDeckLayoutMode,
   getHandOrigin
 } from './state.js';
 

@@ -7,7 +7,7 @@ import {
   ShuffleOptions
 } from './models';
 import { computeFanLayout, computeStackLayout } from './layout';
-import { setDeckPositions, updateCardState, updateCardLayout } from './state';
+import { setDeckLayoutMode, setDeckPositions, updateCardState, updateCardLayout } from './state';
 import { shuffleArray } from './shuffle';
 
 export function fan(deck: DeckState): { deck: DeckState; sequence: AnimationSequence } {
@@ -20,7 +20,7 @@ export function fan(deck: DeckState): { deck: DeckState; sequence: AnimationSequ
     stagger: 15
   };
   return {
-    deck: setDeckPositions(deck, layouts),
+    deck: setDeckLayoutMode(setDeckPositions(deck, layouts), 'fan'),
     sequence
   };
 }
@@ -34,7 +34,7 @@ export function stack(deck: DeckState): { deck: DeckState; sequence: AnimationSe
     }))
   };
   return {
-    deck: setDeckPositions(deck, layouts),
+    deck: setDeckLayoutMode(setDeckPositions(deck, layouts), 'stack'),
     sequence
   };
 }
@@ -55,11 +55,14 @@ export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: 
     stagger: 20
   };
   return {
-    deck: {
-      ...deck,
-      cards,
-      positions: layouts
-    },
+    deck: setDeckLayoutMode(
+      {
+        ...deck,
+        cards,
+        positions: layouts
+      },
+      'stack'
+    ),
     sequence
   };
 }

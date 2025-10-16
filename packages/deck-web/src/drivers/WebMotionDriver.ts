@@ -44,37 +44,41 @@ export class WebMotionDriver implements AnimationDriver {
       const { controls } = entry;
       const { target } = step;
       const transition = this.toTransition(target.duration ?? 300, target.easing ?? 'easeInOut', target.delay ?? 0, isFlip);
-      const baseAnimation = controls.start({
+      if (isFlip) {
+        controls.start({
+          x: target.x,
+          y: target.y,
+          rotate: target.rotation,
+          scale: target.scale,
+          transition
+        }).catch((error) => {
+          console.error('[WebMotionDriver] base animation error', error);
+        });
+
+        const current = this.cards.get(step.cardId);
+        const startAngle = current?.isFaceUp ? 180 : 0;
+        const endAngle = current?.isFaceUp ? 0 : 180;
+        if (current) {
+          current.isFaceUp = !current.isFaceUp;
+        }
+
+        return controls.start({
+          rotateY: [startAngle, startAngle + 90, endAngle],
+          transition: {
+            times: [0, 0.5, 1],
+            duration: transition.duration ?? 0.4,
+            ease: 'easeInOut'
+          }
+        });
+      }
+
+      return controls.start({
         x: target.x,
         y: target.y,
         rotate: target.rotation,
         scale: target.scale,
-        rotateY: entry.isFaceUp ? 180 : 0,
         transition
       });
-
-      if (!isFlip) {
-        return baseAnimation;
-      }
-
-      const current = this.cards.get(step.cardId);
-      const startAngle = current?.isFaceUp ? 180 : 0;
-      const endAngle = current?.isFaceUp ? 0 : 180;
-
-      const flipAnimation = controls.start({
-        rotateY: [startAngle, startAngle + 90, endAngle],
-        transition: {
-          times: [0, 0.5, 1],
-          duration: transition.duration ?? 0.4,
-          ease: 'easeInOut'
-        }
-      });
-
-      if (current) {
-        current.isFaceUp = !current.isFaceUp;
-      }
-
-      return Promise.all([baseAnimation, flipAnimation]).then(() => undefined);
     });
 
     await Promise.all(animations);
