@@ -181,6 +181,7 @@ export default function Page() {
   const [cardsSeed, setCardsSeed] = useState<number>(0);
   type LayoutMode = 'fan' | 'stack';
   const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
+  const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
@@ -221,29 +222,36 @@ export default function Page() {
     if (!actions) {
       return;
     }
+    console.log('[Page] applyDesiredLayout', { desiredLayout, actualLayout });
+    if (desiredLayout === actualLayout) {
+      return;
+    }
     if (desiredLayout === 'fan') {
       await actions.fan();
     } else if (desiredLayout === 'stack') {
       await actions.resetStack();
     }
-  }, [desiredLayout]);
+  }, [desiredLayout, actualLayout]);
 
   const handleShuffle = useCallback(async () => {
     const actions = actionsRef.current;
     if (!actions) {
       return;
     }
+    console.log('[Page] handleShuffle', { desiredLayout, actualLayout });
     await actions.shuffle();
     await applyDesiredLayout();
   }, [applyDesiredLayout]);
 
   const handleFan = useCallback(() => {
     setDesiredLayout('fan');
+    console.log('[Page] handleFan -> desiredLayout set to fan');
     void actionsRef.current?.fan();
   }, []);
 
   const handleStack = useCallback(() => {
     setDesiredLayout('stack');
+    console.log('[Page] handleStack -> desiredLayout set to stack');
     void actionsRef.current?.resetStack();
   }, []);
 
@@ -257,6 +265,11 @@ export default function Page() {
       nextFaceUp[card.id] = card.faceUp;
     });
     setFaceUp(nextFaceUp);
+
+    if (state.layoutMode === 'fan' || state.layoutMode === 'stack') {
+      setActualLayout(state.layoutMode);
+      console.log('[Page] onDeckStateChange layout', { layoutMode: state.layoutMode });
+    }
   }, []);
 
   useEffect(() => {
