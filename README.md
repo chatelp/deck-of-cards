@@ -80,4 +80,4 @@ pnpm --filter @deck/core build   # Build shared core
 
 ## License
 
-MIT © Juha Lindstedt & contributors, modern port maintained by the Cursor project.
+MIT

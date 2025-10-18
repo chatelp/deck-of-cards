@@ -2,6 +2,7 @@ import {
   AnimateToOptions,
   AnimationSequence,
   CardId,
+  DeckLayoutMode,
   DeckState,
   FlipOptions,
   ShuffleOptions
@@ -40,29 +41,70 @@ export function stack(deck: DeckState): { deck: DeckState; sequence: AnimationSe
 }
 
 export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: DeckState; sequence: AnimationSequence } {
+  const originalLayout = deck.layoutMode;
   const cards = shuffleArray(deck.cards, options.seed, options.iterations);
-  const layouts = computeStackLayout({ ...deck, cards });
+  const stackLayouts = computeStackLayout({ ...deck, cards });
+
+  const shouldRestore = options.restoreLayout ?? true;
+  const targetLayout: typeof originalLayout = shouldRestore
+    ? options.restoreLayoutMode ?? originalLayout
+    : 'stack';
+
+  const finalLayouts = targetLayout === 'fan'
+    ? computeFanLayout({ ...deck, cards })
+    : stackLayouts;
+
   const sequence: AnimationSequence = {
-    steps: cards.map((card, index) => ({
-      cardId: card.id,
-      target: {
-        ...layouts[card.id],
-        duration: 500,
-        easing: 'spring',
-        delay: index * 20
-      }
-    })),
-    stagger: 20
+    steps: cards.map((card, index) => {
+      const stackTarget = stackLayouts[card.id];
+      const finalTarget = finalLayouts[card.id];
+      const delayMs = index * 20;
+
+      const target = shouldRestore && targetLayout !== 'stack'
+        ? {
+            x: [stackTarget.x, finalTarget.x],
+            y: [stackTarget.y, finalTarget.y],
+            rotate: [stackTarget.rotation, finalTarget.rotation],
+            scale: [stackTarget.scale, finalTarget.scale],
+            zIndex: finalTarget.zIndex,
+            transition: {
+              duration: 800,
+              ease: 'easeInOut',
+              delay: delayMs,
+              times: [0, 1]
+            }
+          }
+        : {
+            x: stackTarget.x,
+            y: stackTarget.y,
+            rotate: stackTarget.rotation,
+            scale: stackTarget.scale,
+            zIndex: stackTarget.zIndex,
+            transition: {
+              duration: 500,
+              ease: 'spring',
+              delay: delayMs
+            }
+          };
+
+      return {
+        cardId: card.id,
+        target
+      };
+    })
   };
+
+  const nextDeck = setDeckLayoutMode(
+    {
+      ...deck,
+      cards,
+      positions: finalLayouts
+    },
+    targetLayout
+  );
+
   return {
-    deck: setDeckLayoutMode(
-      {
-        ...deck,
-        cards,
-        positions: layouts
-      },
-      'stack'
-    ),
+    deck: nextDeck,
     sequence
   };
 }

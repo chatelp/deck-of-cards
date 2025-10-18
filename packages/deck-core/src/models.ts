@@ -74,6 +74,10 @@ export type AnimationSequenceMeta =
   | undefined
   | {
       type: 'flip';
+    }
+  | {
+      type: 'shuffle';
+      restoreLayoutMode?: DeckLayoutMode;
     };
 
 export interface FanOptions {
@@ -85,6 +89,8 @@ export interface FanOptions {
 export interface ShuffleOptions {
   iterations?: number;
   seed?: number;
+  restoreLayout?: boolean;
+  restoreLayoutMode?: DeckLayoutMode;
 }
 
 export interface AnimateToOptions {
