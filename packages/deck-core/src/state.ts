@@ -9,15 +9,13 @@ import {
   ResolvedDeckStateConfig,
   Vector2
 } from './models';
-import { DEFAULT_CARD_BACK_ASSET } from './defaultAssets';
-
 const defaultConfig: ResolvedDeckStateConfig = {
   fanAngle: Math.PI,
   fanRadius: 240,
   spacing: 24,
   seed: Date.now(),
   drawLimit: 2,
-  defaultBackAsset: DEFAULT_CARD_BACK_ASSET
+  defaultBackAsset: undefined
 };
 
 export function createDeckState(cards: CardData[], config: DeckStateConfig = {}): DeckState {

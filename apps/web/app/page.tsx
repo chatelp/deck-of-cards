@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeckView, DeckViewActions } from '@deck/web';
-import { CardData, CardState, DeckState, CARD_BACK_ASSETS } from '@deck/core';
+import { CardData, CardState, DeckState } from '@deck/core';
 
 interface YiJingCard extends CardData {
   hexagram: string;
@@ -143,17 +143,17 @@ const yiJingMeanings = [
   'Before Completion'
 ];
 
+const CARD_BACK_OPTIONS = [
+  { id: 'light', label: 'Light', asset: '/cards/card-back-light.png' },
+  { id: 'dark', label: 'Dark', asset: '/cards/card-back-dark.png' }
+] as const;
+
 const allYiJingCards: YiJingCard[] = Array.from({ length: 64 }).map((_, index) => ({
   id: `card-${index}`,
   name: `Hexagram ${index + 1}`,
   hexagram: yiJingHexagrams[index],
   meaning: yiJingMeanings[index]
 }));
-
-const CARD_BACK_OPTIONS = [
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' }
-] as const;
 
 type CardBackOptionId = (typeof CARD_BACK_OPTIONS)[number]['id'];
 
@@ -191,12 +191,18 @@ export default function Page() {
   const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
   const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
-  const defaultBackAsset = CARD_BACK_ASSETS[cardBackOption];
+  const defaultBackAsset = useMemo(
+    () => CARD_BACK_OPTIONS.find((option) => option.id === cardBackOption)?.asset ?? CARD_BACK_OPTIONS[0].asset,
+    [cardBackOption]
+  );
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
-    return shuffled.slice(0, deckSize);
-  }, [deckSize, cardsSeed]);
+    return shuffled.slice(0, deckSize).map((card) => ({
+      ...card,
+      backAsset: defaultBackAsset
+    }));
+  }, [deckSize, cardsSeed, defaultBackAsset]);
   const remainingCount = cards.length - drawnCards.length;
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selected) ?? null;

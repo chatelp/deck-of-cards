@@ -5,7 +5,7 @@ export interface CardData {
   name: string;
   description?: string;
   faceAsset?: string;
-  backAsset?: string;
+  backAsset?: string | number;
   metadata?: Record<string, unknown>;
 }
 
@@ -47,7 +47,7 @@ export interface DeckStateConfig {
   spacing?: number;
   seed?: number;
   drawLimit?: number;
-  defaultBackAsset?: string;
+  defaultBackAsset?: string | number;
 }
 
 export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'custom';
@@ -58,7 +58,7 @@ export interface ResolvedDeckStateConfig {
   spacing: number;
   seed: number;
   drawLimit: number;
-  defaultBackAsset?: string;
+  defaultBackAsset?: string | number;
 }
 
 export interface DeckState {

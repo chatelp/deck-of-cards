@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { SafeAreaView, StyleSheet, StatusBar, View, Text, Button } from 'react-native';
 import { DeckView, DeckViewActions } from '@deck/rn';
-import { CardData, DEFAULT_CARD_BACK_ASSET } from '@deck/core';
+import { CardData } from '@deck/core';
+
+const CARD_BACK_LIGHT = require('./assets/cards/card-back-light.png');
 
 const cards: CardData[] = Array.from({ length: 10 }).map((_, index) => ({
   id: `card-${index}`,
   name: `Card ${index + 1}`,
-  backAsset: DEFAULT_CARD_BACK_ASSET
+  backAsset: CARD_BACK_LIGHT
 }));
 
 export default function App() {
@@ -39,7 +41,7 @@ export default function App() {
               <Text style={styles.cardTitle}>{data.name}</Text>
             </View>
           )}
-          defaultBackAsset={DEFAULT_CARD_BACK_ASSET}
+          defaultBackAsset={CARD_BACK_LIGHT}
         />
       </View>
     </SafeAreaView>

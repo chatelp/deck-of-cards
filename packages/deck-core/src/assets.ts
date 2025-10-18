@@ -1,7 +1,7 @@
 import { CardState, ResolvedDeckStateConfig } from './models';
 
 export interface ResolveCardBackAssetOptions {
-  defaultAsset?: string;
+  defaultAsset?: string | number;
 }
 
 /**
@@ -14,21 +14,31 @@ export function resolveCardBackAsset(
   card: CardState,
   config?: Pick<ResolvedDeckStateConfig, 'defaultBackAsset'>,
   options?: ResolveCardBackAssetOptions
-): string | undefined {
+): string | number | undefined {
   const candidate = card.data?.backAsset;
-  if (candidate && candidate.trim().length > 0) {
+  if (isValidAsset(candidate)) {
     return candidate;
   }
 
   const configAsset = config?.defaultBackAsset;
-  if (configAsset && configAsset.trim().length > 0) {
+  if (isValidAsset(configAsset)) {
     return configAsset;
   }
 
   const optionAsset = options?.defaultAsset;
-  if (optionAsset && optionAsset.trim().length > 0) {
+  if (isValidAsset(optionAsset)) {
     return optionAsset;
   }
 
   return undefined;
+}
+
+function isValidAsset(value: string | number | undefined): value is string | number {
+  if (typeof value === 'number') {
+    return true;
+  }
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+  return false;
 }

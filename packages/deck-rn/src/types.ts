@@ -51,7 +51,7 @@ export interface DeckViewProps {
   renderCardFace: (props: CardRenderProps) => ReactNode;
   renderCardBack?: (props: CardRenderProps) => ReactNode;
   drawLimit?: number;
-  defaultBackAsset?: string;
+  defaultBackAsset?: string | number;
   layoutMode?: 'stack' | 'fan' | 'grid';
   autoFan?: boolean;
   style?: StyleProp<ViewStyle>;
