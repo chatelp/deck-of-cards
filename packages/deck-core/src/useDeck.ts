@@ -7,7 +7,8 @@ import {
   DeckEvent,
   DeckEventName,
   DeckState,
-  DeckStateConfig
+  DeckStateConfig,
+  ShuffleOptions
 } from './models';
 import { DeckObservable } from './observable';
 import { createDeckState, setDeckPositions, updateCardLayout, updateCardState } from './state';
@@ -66,11 +67,14 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     await applySequence(nextDeck, sequence);
   }, [deck, applySequence]);
 
-  const shuffle = useCallback(async () => {
-    const { deck: nextDeck, sequence } = shuffleDeck(deck);
-    await applySequence(nextDeck, sequence);
-    observable.emit({ type: 'shuffle', payload: { order: nextDeck.cards.map((card) => card.id) } });
-  }, [deck, applySequence]);
+  const shuffle = useCallback(
+    async (options?: ShuffleOptions) => {
+      const { deck: nextDeck, sequence } = shuffleDeck(deck, options);
+      await applySequence(nextDeck, sequence);
+      observable.emit({ type: 'shuffle', payload: { order: nextDeck.cards.map((card) => card.id) } });
+    },
+    [deck, applySequence]
+  );
 
   const flip = useCallback(
     async (cardId: CardId) => {

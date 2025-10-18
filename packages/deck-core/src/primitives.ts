@@ -2,6 +2,7 @@ import {
   AnimateToOptions,
   AnimationSequence,
   CardId,
+  CardTransform,
   DeckLayoutMode,
   DeckState,
   FlipOptions,
@@ -60,32 +61,22 @@ export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: 
       const finalTarget = finalLayouts[card.id];
       const delayMs = index * 20;
 
-      const target = shouldRestore && targetLayout !== 'stack'
-        ? {
-            x: [stackTarget.x, finalTarget.x],
-            y: [stackTarget.y, finalTarget.y],
-            rotate: [stackTarget.rotation, finalTarget.rotation],
-            scale: [stackTarget.scale, finalTarget.scale],
-            zIndex: finalTarget.zIndex,
-            transition: {
-              duration: 800,
-              ease: 'easeInOut',
-              delay: delayMs,
-              times: [0, 1]
-            }
-          }
-        : {
-            x: stackTarget.x,
-            y: stackTarget.y,
-            rotate: stackTarget.rotation,
-            scale: stackTarget.scale,
-            zIndex: stackTarget.zIndex,
-            transition: {
-              duration: 500,
-              ease: 'spring',
-              delay: delayMs
-            }
-          };
+      const restoringToOriginalLayout = shouldRestore && targetLayout !== 'stack';
+      const animationTarget = restoringToOriginalLayout ? finalTarget : stackTarget;
+
+      const duration = restoringToOriginalLayout ? 800 : 500;
+      const easing = restoringToOriginalLayout ? 'easeInOut' : 'spring';
+
+      const target: CardTransform = {
+        x: animationTarget.x,
+        y: animationTarget.y,
+        rotation: animationTarget.rotation,
+        scale: animationTarget.scale,
+        zIndex: finalTarget.zIndex,
+        duration,
+        easing,
+        delay: delayMs
+      };
 
       return {
         cardId: card.id,

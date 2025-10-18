@@ -182,6 +182,7 @@ export default function Page() {
   type LayoutMode = 'fan' | 'stack';
   const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
   const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
+  const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
@@ -239,9 +240,15 @@ export default function Page() {
       return;
     }
     console.log('[Page] handleShuffle', { desiredLayout, actualLayout });
-    await actions.shuffle();
-    await applyDesiredLayout();
-  }, [applyDesiredLayout]);
+    await actions.shuffle({ restoreLayout: restoreLayoutAfterShuffle });
+    if (restoreLayoutAfterShuffle) {
+      await applyDesiredLayout();
+    } else {
+      if (desiredLayout !== 'stack') {
+        setDesiredLayout('stack');
+      }
+    }
+  }, [applyDesiredLayout, restoreLayoutAfterShuffle, desiredLayout, actualLayout]);
 
   const handleFan = useCallback(() => {
     setDesiredLayout('fan');
@@ -289,6 +296,18 @@ export default function Page() {
         <button type="button" onClick={handleShuffle}>
           Shuffle
         </button>
+        <label className="toggle-restore">
+          <input
+            type="checkbox"
+            checked={restoreLayoutAfterShuffle}
+            onChange={(event) => {
+              const nextValue = event.target.checked;
+              console.log('[Page] toggle restoreLayoutAfterShuffle', { nextValue });
+              setRestoreLayoutAfterShuffle(nextValue);
+            }}
+          />
+          Restore layout after shuffle
+        </label>
         <button type="button" onClick={handleFan}>
           Fan
         </button>

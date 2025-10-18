@@ -5,7 +5,8 @@ import {
   CardLayout,
   CardState,
   CardTransform,
-  DeckState
+  DeckState,
+  ShuffleOptions
 } from '@deck/core';
 import { StyleProp, ViewStyle } from 'react-native';
 
@@ -31,7 +32,7 @@ export interface CardViewProps {
 
 export interface DeckViewActions {
   fan: () => Promise<void>;
-  shuffle: () => Promise<void>;
+  shuffle: (options?: ShuffleOptions) => Promise<void>;
   flip: (cardId: string) => Promise<void>;
   animateTo: (cardId: string, target: CardAnimationTarget) => Promise<void>;
   selectCard: (cardId: string) => Promise<boolean | undefined>;

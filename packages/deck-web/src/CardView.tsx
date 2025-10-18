@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { CardViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
@@ -17,6 +17,7 @@ export const CardView: React.FC<CardViewProps> = ({
   driver
 }) => {
   const controls = useAnimationControls();
+  const [isInteracting, setIsInteracting] = useState(false);
   const frontContent = renderBack({ state, data: state.data!, layout, isSelected });
   const backContent = renderFace({ state, data: state.data!, layout, isSelected });
   const centeredLayout = useMemo(() => ({
@@ -58,10 +59,25 @@ export const CardView: React.FC<CardViewProps> = ({
     }
   }, [isSelected, onFlip, state.id, state.faceUp]);
 
+  const handlePointerDown = useCallback(() => {
+    if (isSelected) {
+      return;
+    }
+    setIsInteracting(true);
+  }, [isSelected]);
+
+  const handlePointerEnd = useCallback(() => {
+    setIsInteracting(false);
+  }, []);
+
   return (
     <motion.button
       type="button"
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onPointerLeave={handlePointerEnd}
       className="deck-card card-3d-wrapper"
       style={{
         position: 'absolute',
@@ -74,7 +90,7 @@ export const CardView: React.FC<CardViewProps> = ({
         border: 'none',
         padding: 0,
         cursor: isSelected ? 'default' : 'pointer',
-        zIndex: isSelected ? layout.zIndex + 1000 : layout.zIndex
+        zIndex: layout.zIndex + (isSelected ? 1000 : 0) + (isInteracting ? 2000 : 0)
       }}
       animate={controls}
       initial={{
