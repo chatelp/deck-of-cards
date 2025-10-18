@@ -74,27 +74,27 @@ export const DeckView: React.FC<DeckViewProps> = ({
           isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
           driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
           onFlip={async () => {
-            void flip(card.id)
-              .then(() => {
-                onFlipCard?.(card.id, !card.faceUp);
-              })
-              .catch((error) => {
-                console.error('[DeckView] flip error', error);
-              });
-            setTimeout(() => {
-              void drawCard(card.id)
-                .then((drawn) => {
-                  if (drawn) {
-                    onSelectCard?.(card.id, true);
-                    onDrawCard?.(drawn as CardState);
-                  }
-                })
-                .catch((error) => {
-                  console.error('[DeckView] draw error', error);
-                });
-            }, 220);
+            const willBeFaceUp = !card.faceUp;
+            try {
+              await flip(card.id);
+              onFlipCard?.(card.id, willBeFaceUp);
+            } catch (error) {
+              console.error('[DeckView] flip error', error);
+              throw error;
+            }
           }}
-          onSelect={undefined}
+          onSelect={async () => {
+            try {
+              const drawn = await drawCard(card.id);
+              if (drawn) {
+                onSelectCard?.(card.id, true);
+                onDrawCard?.(drawn as CardState);
+              }
+            } catch (error) {
+              console.error('[DeckView] draw error', error);
+              throw error;
+            }
+          }}
           renderFace={renderCardFace}
           renderBack={renderCardBack}
         />
