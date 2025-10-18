@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { SafeAreaView, StyleSheet, StatusBar, View, Text, Button } from 'react-native';
 import { DeckView, DeckViewActions } from '@deck/rn';
-import { CardData } from '@deck/core';
+import { CardData, DEFAULT_CARD_BACK_ASSET } from '@deck/core';
 
 const cards: CardData[] = Array.from({ length: 10 }).map((_, index) => ({
   id: `card-${index}`,
-  name: `Card ${index + 1}`
+  name: `Card ${index + 1}`,
+  backAsset: DEFAULT_CARD_BACK_ASSET
 }));
 
 export default function App() {
@@ -38,11 +39,7 @@ export default function App() {
               <Text style={styles.cardTitle}>{data.name}</Text>
             </View>
           )}
-          renderCardBack={() => (
-            <View style={[styles.cardBack, styles.card]}>
-              <Text style={styles.cardTitle}>Yi Jing</Text>
-            </View>
-          )}
+          defaultBackAsset={DEFAULT_CARD_BACK_ASSET}
         />
       </View>
     </SafeAreaView>
@@ -74,9 +71,6 @@ const styles = StyleSheet.create({
   },
   cardFace: {
     backgroundColor: '#fff'
-  },
-  cardBack: {
-    backgroundColor: '#333'
   },
   cardTitle: {
     color: '#111',

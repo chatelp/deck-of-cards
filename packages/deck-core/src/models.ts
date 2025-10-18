@@ -47,15 +47,25 @@ export interface DeckStateConfig {
   spacing?: number;
   seed?: number;
   drawLimit?: number;
+  defaultBackAsset?: string;
 }
 
 export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'custom';
+
+export interface ResolvedDeckStateConfig {
+  fanAngle: number;
+  fanRadius: number;
+  spacing: number;
+  seed: number;
+  drawLimit: number;
+  defaultBackAsset?: string;
+}
 
 export interface DeckState {
   cards: CardState[];
   drawnCards: CardState[];
   positions: Record<CardId, CardLayout>;
-  config: Required<DeckStateConfig>;
+  config: ResolvedDeckStateConfig;
   layoutMode: DeckLayoutMode;
 }
 

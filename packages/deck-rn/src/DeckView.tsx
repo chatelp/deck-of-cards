@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet, Image } from 'react-native';
 import {
   AnimationDriver,
   CardData,
@@ -7,10 +7,11 @@ import {
   CardState,
   DeckState,
   NoopAnimationDriver,
+  resolveCardBackAsset,
   useDeck
 } from '@deck/core';
 import { CardView } from './CardView';
-import { CardAnimationTarget, DeckViewProps } from './types';
+import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
@@ -22,6 +23,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
   onDeckStateChange,
   renderCardFace,
   renderCardBack,
+  drawLimit,
+  defaultBackAsset,
   autoFan = false,
   style,
   onDeckReady
@@ -30,7 +33,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     () => driver ?? new NoopAnimationDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver);
+  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset });
   const { deck, fan, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
 
   const lastFannedLengthRef = useRef<number | null>(null);
@@ -67,6 +70,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
   }, [deck, onDeckStateChange]);
 
   const layout: DeckState['positions'] = deck.positions;
+  const fallbackRenderBack = useCallback(
+    ({ state }: CardRenderProps) => {
+      const asset = resolveCardBackAsset(state, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
+      if (!asset) {
+        return <View style={[styles.cardBackPlaceholder]} />;
+      }
+      return <Image source={{ uri: asset }} style={styles.cardBackImage} resizeMode="cover" />;
+    },
+    [deck.config.defaultBackAsset, defaultBackAsset]
+  );
+  const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
   return (
     <View style={[styles.container, style]}>
@@ -88,7 +102,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
             }
           }}
           renderFace={renderCardFace}
-          renderBack={renderCardBack}
+          renderBack={effectiveRenderBack}
         />
       ))}
     </View>
@@ -98,5 +112,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1
+  },
+  cardBackImage: {
+    width: '100%',
+    height: '100%'
+  },
+  cardBackPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+    backgroundColor: '#1f2937'
   }
 });

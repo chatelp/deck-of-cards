@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeckView, DeckViewActions } from '@deck/web';
-import { CardData, CardState, DeckState } from '@deck/core';
+import { CardData, CardState, DeckState, CARD_BACK_ASSETS } from '@deck/core';
 
 interface YiJingCard extends CardData {
   hexagram: string;
@@ -150,6 +150,13 @@ const allYiJingCards: YiJingCard[] = Array.from({ length: 64 }).map((_, index) =
   meaning: yiJingMeanings[index]
 }));
 
+const CARD_BACK_OPTIONS = [
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' }
+] as const;
+
+type CardBackOptionId = (typeof CARD_BACK_OPTIONS)[number]['id'];
+
 function seededRandom(seed: number): () => number {
   let value = seed % 2147483647;
   if (value <= 0) {
@@ -183,6 +190,8 @@ export default function Page() {
   const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
   const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
+  const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
+  const defaultBackAsset = CARD_BACK_ASSETS[cardBackOption];
 
   const cards = useMemo(() => {
     const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
@@ -361,6 +370,22 @@ export default function Page() {
             ))}
           </select>
         </label>
+        <label className="deck-size-picker">
+          Card back:
+          <select
+            value={cardBackOption}
+            onChange={(event) => {
+              const nextOption = event.target.value as CardBackOptionId;
+              setCardBackOption(nextOption);
+            }}
+          >
+            {CARD_BACK_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <section className="demo-main">
@@ -370,6 +395,7 @@ export default function Page() {
             cards={cards}
             autoFan
             drawLimit={drawLimit}
+            defaultBackAsset={defaultBackAsset}
             onDeckReady={(actions) => {
               actionsRef.current = actions;
             }}
@@ -391,14 +417,6 @@ export default function Page() {
                 <span className="card-hexagram">{(data as YiJingCard).hexagram}</span>
                 <span className="card-title">{data.name}</span>
                 <span className="card-meaning">{(data as YiJingCard).meaning}</span>
-              </div>
-            )}
-            renderCardBack={() => (
-              <div className="card-back">
-                <div className="card-back-ring">
-                  <span className="card-back-logo">易</span>
-                </div>
-                <span className="card-back-text">Yi Jing Oracle</span>
               </div>
             )}
           />

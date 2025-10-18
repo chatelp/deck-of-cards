@@ -7,6 +7,7 @@ export type {
   CardTransform,
   EasingName,
   DeckStateConfig,
+  ResolvedDeckStateConfig,
   DeckState,
   DeckLayoutMode,
   AnimationStep,
@@ -40,3 +41,7 @@ export { useDeck } from './useDeck.js';
 export { NoopAnimationDriver } from './drivers.js';
 
 export { DeckObservable } from './observable.js';
+
+export { resolveCardBackAsset } from './assets.js';
+
+export { DEFAULT_CARD_BACK_ASSET, CARD_BACK_ASSETS } from './defaultAssets.js';

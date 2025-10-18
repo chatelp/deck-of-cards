@@ -49,7 +49,9 @@ export interface DeckViewProps {
   onFlipCard?: (cardId: string, faceUp: boolean) => void;
   onDeckStateChange?: (state: DeckState) => void;
   renderCardFace: (props: CardRenderProps) => ReactNode;
-  renderCardBack: (props: CardRenderProps) => ReactNode;
+  renderCardBack?: (props: CardRenderProps) => ReactNode;
+  drawLimit?: number;
+  defaultBackAsset?: string;
   layoutMode?: 'stack' | 'fan' | 'grid';
   autoFan?: boolean;
   style?: StyleProp<ViewStyle>;

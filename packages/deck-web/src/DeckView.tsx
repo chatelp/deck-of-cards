@@ -1,7 +1,15 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { AnimationDriver, CardData, CardLayout, CardState, DeckState, useDeck } from '@deck/core';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  AnimationDriver,
+  CardData,
+  CardLayout,
+  CardState,
+  DeckState,
+  resolveCardBackAsset,
+  useDeck
+} from '@deck/core';
 import { CardView } from './CardView';
-import { CardAnimationTarget, DeckViewProps } from './types';
+import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
 
 export const DeckView: React.FC<DeckViewProps> = ({
@@ -15,6 +23,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   drawLimit,
   renderCardFace,
   renderCardBack,
+  defaultBackAsset,
   autoFan = false,
   onDeckReady,
   className
@@ -23,7 +32,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     () => driver ?? new WebMotionDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver, { drawLimit });
+  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset });
   const { deck, fan, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
 
   // Initial fan is handled by the next effect on first render (cards.length stable)
@@ -63,6 +72,58 @@ export const DeckView: React.FC<DeckViewProps> = ({
   }, [deck, onDeckStateChange]);
 
   const layout: DeckState['positions'] = deck.positions;
+  const fallbackRenderBack = useCallback(
+    ({ state, data }: CardRenderProps) => {
+      const asset = resolveCardBackAsset(state, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
+      if (!asset) {
+        const fallbackInitial = data.name?.[0]?.toUpperCase() ?? '🂠';
+        return (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#f9fafb',
+              fontSize: 18,
+              fontWeight: 600
+            }}
+          >
+            {fallbackInitial}
+          </div>
+        );
+      }
+
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: 12,
+            overflow: 'hidden',
+            backgroundColor: '#111'
+          }}
+        >
+          <img
+            src={asset}
+            alt={`${data.name} card back`}
+            draggable={false}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block'
+            }}
+          />
+        </div>
+      );
+    },
+    [deck.config.defaultBackAsset, defaultBackAsset]
+  );
+  const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -96,7 +157,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
             }
           }}
           renderFace={renderCardFace}
-          renderBack={renderCardBack}
+          renderBack={effectiveRenderBack}
         />
       ))}
     </div>

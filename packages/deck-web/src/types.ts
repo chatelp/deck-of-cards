@@ -49,8 +49,9 @@ export interface DeckViewProps {
   onDeckStateChange?: (state: DeckState) => void;
   drawLimit?: number;
   renderCardFace: (props: CardRenderProps) => ReactNode;
-  renderCardBack: (props: CardRenderProps) => ReactNode;
+  renderCardBack?: (props: CardRenderProps) => ReactNode;
   autoFan?: boolean;
   onDeckReady?: (actions: DeckViewActions) => void;
   className?: string;
+  defaultBackAsset?: string;
 }

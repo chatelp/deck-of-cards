@@ -1,15 +1,30 @@
-import { CardData, CardId, CardLayout, CardState, DeckLayoutMode, DeckState, DeckStateConfig, Vector2 } from './models';
+import {
+  CardData,
+  CardId,
+  CardLayout,
+  CardState,
+  DeckLayoutMode,
+  DeckState,
+  DeckStateConfig,
+  ResolvedDeckStateConfig,
+  Vector2
+} from './models';
+import { DEFAULT_CARD_BACK_ASSET } from './defaultAssets';
 
-const defaultConfig: Required<DeckStateConfig> = {
+const defaultConfig: ResolvedDeckStateConfig = {
   fanAngle: Math.PI,
   fanRadius: 240,
   spacing: 24,
   seed: Date.now(),
-  drawLimit: 2
+  drawLimit: 2,
+  defaultBackAsset: DEFAULT_CARD_BACK_ASSET
 };
 
 export function createDeckState(cards: CardData[], config: DeckStateConfig = {}): DeckState {
-  const mergedConfig = { ...defaultConfig, ...config };
+  const mergedConfig: ResolvedDeckStateConfig = {
+    ...defaultConfig,
+    ...config
+  };
   const cardStates: CardState[] = cards.map((card) => ({
     id: card.id,
     faceUp: false,

@@ -36,7 +36,14 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
       return undefined;
     }
     return { ...config } as DeckStateConfig;
-  }, [config?.drawLimit, config?.fanAngle, config?.fanRadius, config?.spacing, config?.seed]);
+  }, [
+    config?.drawLimit,
+    config?.fanAngle,
+    config?.fanRadius,
+    config?.spacing,
+    config?.seed,
+    config?.defaultBackAsset
+  ]);
 
   const initialState = useMemo(() => createDeckState(cards, normalizedConfig), [cards, normalizedConfig]);
   const [deck, dispatch] = useReducer(deckReducer, initialState);
