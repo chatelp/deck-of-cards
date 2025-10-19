@@ -425,14 +425,23 @@ export default function Page() {
             value={deckSize}
             onChange={(event) => {
               const nextSize = Number(event.target.value);
+              const layoutToRestore = actualLayout;
               setSelected(null);
               setFaceUp({});
               setDrawnCards([]);
               setDeckSize(nextSize);
-              setDesiredLayout('fan');
               setTimeout(() => {
-                actionsRef.current?.resetStack();
-                actionsRef.current?.fan();
+                const actions = actionsRef.current;
+                if (!actions) {
+                  return;
+                }
+                if (layoutToRestore === 'ring') {
+                  void actions.ring({ radius: ringRadius });
+                } else if (layoutToRestore === 'fan') {
+                  void actions.fan();
+                } else {
+                  void actions.resetStack();
+                }
               }, 50);
             }}
           >
@@ -449,11 +458,24 @@ export default function Page() {
             value={drawLimit}
             onChange={(event) => {
               const nextLimit = Number(event.target.value);
+              const layoutToRestore = actualLayout;
               setDrawLimit(nextLimit);
               setSelected(null);
               setDrawnCards([]);
               setFaceUp({});
-              setDesiredLayout('fan');
+              setTimeout(() => {
+                const actions = actionsRef.current;
+                if (!actions) {
+                  return;
+                }
+                if (layoutToRestore === 'ring') {
+                  void actions.ring({ radius: ringRadius });
+                } else if (layoutToRestore === 'fan') {
+                  void actions.fan();
+                } else {
+                  void actions.resetStack();
+                }
+              }, 50);
             }}
           >
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((limitOption) => (
