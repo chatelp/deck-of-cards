@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import {
   AnimationDriver,
   CardData,
@@ -49,11 +49,31 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
 
   const initialState = useMemo(() => createDeckState(cards, normalizedConfig), [cards, normalizedConfig]);
   const [deck, dispatch] = useReducer(deckReducer, initialState);
+  const deckRef = useRef(deck);
+  useEffect(() => {
+    deckRef.current = deck;
+  }, [deck]);
   const observable = useMemo(() => new DeckObservable(), []);
 
-  // When the cards input changes (e.g., deck size changes) or config changes, rebuild the deck state
+  // When the cards input or config changes, rebuild the deck while preserving the current layout mode
   useEffect(() => {
-    const next = createDeckState(cards, normalizedConfig);
+    const base = createDeckState(cards, normalizedConfig);
+    const currentLayout = deckRef.current.layoutMode;
+    let next = base;
+    try {
+      if (currentLayout === 'ring') {
+        next = ringDeck(base).deck;
+      } else if (currentLayout === 'fan') {
+        next = fan(base).deck;
+      } else if (currentLayout === 'stack') {
+        next = stack(base).deck;
+      } else {
+        // default to fan if an unknown/custom mode is active
+        next = fan(base).deck;
+      }
+    } catch (_err) {
+      next = base;
+    }
     dispatch({ type: 'SET_STATE', payload: next });
   }, [cards, normalizedConfig]);
 
