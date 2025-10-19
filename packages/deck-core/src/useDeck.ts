@@ -8,6 +8,7 @@ import {
   DeckEventName,
   DeckState,
   DeckStateConfig,
+  RingOptions,
   ShuffleOptions
 } from './models';
 import { DeckObservable } from './observable';
@@ -75,8 +76,8 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     await applySequence(nextDeck, sequence);
   }, [deck, applySequence]);
 
-  const ring = useCallback(async () => {
-    const { deck: nextDeck, sequence } = ringDeck(deck);
+  const ring = useCallback(async (options?: RingOptions) => {
+    const { deck: nextDeck, sequence } = ringDeck(deck, options);
     await applySequence(nextDeck, sequence);
     observable.emit({ type: 'ring', payload: { layouts: nextDeck.positions } });
   }, [deck, applySequence]);

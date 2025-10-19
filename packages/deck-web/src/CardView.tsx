@@ -3,8 +3,8 @@ import { motion, useAnimationControls } from 'framer-motion';
 import { CardViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
 
-const CARD_WIDTH = 160;
-const CARD_HEIGHT = 240;
+export const CARD_WIDTH = 160;
+export const CARD_HEIGHT = 240;
 
 export const CardView: React.FC<CardViewProps> = ({
   state,

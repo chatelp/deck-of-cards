@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AnimationDriver,
-  CardData,
   CardLayout,
   CardState,
   DeckState,
+  calculateDeckBounds,
   resolveCardBackAsset,
   useDeck
 } from '@deck/core';
-import { CardView } from './CardView';
+import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 import { WebMotionDriver } from './drivers/WebMotionDriver';
+
+const BOUNDARY_PADDING = 24;
 
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
@@ -24,15 +26,19 @@ export const DeckView: React.FC<DeckViewProps> = ({
   renderCardFace,
   renderCardBack,
   defaultBackAsset,
+  ringRadius,
   autoFan = false,
   onDeckReady,
   className
 }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
   const animationDriver: AnimationDriver = useMemo(
     () => driver ?? new WebMotionDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset });
+  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
   const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
   const [loadedBackAssets, setLoadedBackAssets] = useState<Record<string, boolean>>({});
 
@@ -107,6 +113,111 @@ export const DeckView: React.FC<DeckViewProps> = ({
     });
   }, [deck.cards, deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]);
 
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect();
+      setContainerSize((prev) => {
+        if (prev.width === rect.width && prev.height === rect.height) {
+          return prev;
+        }
+        return { width: rect.width, height: rect.height };
+      });
+    };
+
+    updateSize();
+
+    const globalWindow = window as typeof window & {
+      ResizeObserver?: new (...args: any[]) => {
+        observe: (target: Element) => void;
+        disconnect: () => void;
+      };
+      addEventListener?: (type: string, listener: () => void) => void;
+      removeEventListener?: (type: string, listener: () => void) => void;
+    };
+
+    const ResizeObserverCtor = globalWindow.ResizeObserver;
+    if (ResizeObserverCtor) {
+      const observer = new ResizeObserverCtor((entries: Array<{ target: Element; contentRect: DOMRectReadOnly }>) => {
+        entries.forEach((entry) => {
+          if (entry.target === element) {
+            const { width, height } = entry.contentRect;
+            setContainerSize((prev) => {
+              if (prev.width === width && prev.height === height) {
+                return prev;
+              }
+              return { width, height };
+            });
+          }
+        });
+      });
+      observer.observe(element);
+      return () => {
+        observer.disconnect();
+      };
+    }
+
+    globalWindow.addEventListener?.('resize', updateSize);
+    return () => {
+      globalWindow.removeEventListener?.('resize', updateSize);
+    };
+  }, []);
+
+  const deckBounds = useMemo(
+    () =>
+      calculateDeckBounds(deck.cards, deck.positions, {
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT
+      }),
+    [deck.cards, deck.positions]
+  );
+
+  const deckTransform = useMemo(() => {
+    if (deckBounds.width === 0 || deckBounds.height === 0) {
+      return { translateX: 0, translateY: 0, scale: 1 };
+    }
+    const paddedWidth = deckBounds.width + BOUNDARY_PADDING * 2;
+    const paddedHeight = deckBounds.height + BOUNDARY_PADDING * 2;
+    const { width: availableWidth, height: availableHeight } = containerSize;
+    if (availableWidth <= 0 || availableHeight <= 0) {
+      return {
+        translateX: -deckBounds.centerX,
+        translateY: -deckBounds.centerY,
+        scale: 1
+      };
+    }
+    const scaleX = availableWidth / paddedWidth;
+    const scaleY = availableHeight / paddedHeight;
+    const scale = Math.min(1, scaleX, scaleY);
+    return {
+      translateX: -deckBounds.centerX,
+      translateY: -deckBounds.centerY,
+      scale: Number.isFinite(scale) && scale > 0 ? scale : 1
+    };
+  }, [deckBounds, containerSize]);
+
+  const canvasStyle = useMemo<React.CSSProperties>(() => {
+    const transforms: string[] = [];
+    if (deckTransform.translateX !== 0 || deckTransform.translateY !== 0) {
+      transforms.push(`translate3d(${deckTransform.translateX}px, ${deckTransform.translateY}px, 0)`);
+    }
+    if (deckTransform.scale !== 1) {
+      transforms.push(`scale(${deckTransform.scale})`);
+    }
+    const transform = transforms.length > 0 ? transforms.join(' ') : undefined;
+    return {
+      position: 'absolute',
+      inset: 0,
+      pointerEvents: 'auto',
+      transformOrigin: '50% 50%',
+      transform
+    };
+  }, [deckTransform]);
+
   const layout: DeckState['positions'] = deck.positions;
   const fallbackRenderBack = useCallback(
     ({ state, data }: CardRenderProps) => {
@@ -126,40 +237,42 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
   return (
-    <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {deck.cards.map((card) => (
-        <CardView
-          key={card.id}
-          state={card}
-          layout={layout[card.id] as CardLayout}
-          isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-          driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
-          onFlip={async () => {
-            const willBeFaceUp = !card.faceUp;
-            try {
-              await flip(card.id);
-              onFlipCard?.(card.id, willBeFaceUp);
-            } catch (error) {
-              console.error('[DeckView] flip error', error);
-              throw error;
-            }
-          }}
-          onSelect={async () => {
-            try {
-              const drawn = await drawCard(card.id);
-              if (drawn) {
-                onSelectCard?.(card.id, true);
-                onDrawCard?.(drawn as CardState);
+    <div ref={containerRef} className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div style={canvasStyle}>
+        {deck.cards.map((card) => (
+          <CardView
+            key={card.id}
+            state={card}
+            layout={layout[card.id] as CardLayout}
+            isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+            driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
+            onFlip={async () => {
+              const willBeFaceUp = !card.faceUp;
+              try {
+                await flip(card.id);
+                onFlipCard?.(card.id, willBeFaceUp);
+              } catch (error) {
+                console.error('[DeckView] flip error', error);
+                throw error;
               }
-            } catch (error) {
-              console.error('[DeckView] draw error', error);
-              throw error;
-            }
-          }}
-          renderFace={renderCardFace}
-          renderBack={effectiveRenderBack}
-        />
-      ))}
+            }}
+            onSelect={async () => {
+              try {
+                const drawn = await drawCard(card.id);
+                if (drawn) {
+                  onSelectCard?.(card.id, true);
+                  onDrawCard?.(drawn as CardState);
+                }
+              } catch (error) {
+                console.error('[DeckView] draw error', error);
+                throw error;
+              }
+            }}
+            renderFace={renderCardFace}
+            renderBack={effectiveRenderBack}
+          />
+        ))}
+      </div>
     </div>
   );
 };

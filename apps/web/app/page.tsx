@@ -207,6 +207,65 @@ export default function Page() {
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selected) ?? null;
   const drawLimitReached = drawnCards.length >= drawLimit;
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window !== 'undefined' ? window.innerWidth : 1024));
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const layoutMetrics = useMemo(() => {
+    const safeWidth = Math.max(320, viewportWidth - 48);
+    if (actualLayout === 'ring') {
+      const maxWidth = Math.min(safeWidth, 520);
+      const padding = Math.max(24, maxWidth * 0.08);
+      const radius = Math.max(120, (maxWidth - padding * 2) / 2);
+      return {
+        style: {
+          width: '100%',
+          maxWidth,
+          aspectRatio: '1 / 1',
+          padding
+        } as React.CSSProperties,
+        ringRadius: radius
+      };
+    }
+    if (actualLayout === 'stack') {
+      const maxWidth = Math.min(safeWidth, 420);
+      const padding = Math.max(20, maxWidth * 0.08);
+      return {
+        style: {
+          width: '100%',
+          maxWidth,
+          aspectRatio: '3 / 4',
+          padding
+        } as React.CSSProperties,
+        ringRadius: undefined
+      };
+    }
+    const maxWidth = Math.min(safeWidth, 900);
+    const padding = Math.max(24, maxWidth * 0.05);
+    return {
+      style: {
+        width: '100%',
+        maxWidth,
+        aspectRatio: '5 / 3',
+        padding
+      } as React.CSSProperties,
+      ringRadius: undefined
+    };
+  }, [actualLayout, viewportWidth]);
+
+  const deckContainerStyle = layoutMetrics.style;
+  const ringRadius = layoutMetrics.ringRadius;
 
   useEffect(() => {
     if (cardsSeed === 0) {
@@ -245,11 +304,11 @@ export default function Page() {
     if (desiredLayout === 'fan') {
       await actions.fan();
     } else if (desiredLayout === 'ring') {
-      await actions.ring();
+      await actions.ring({ radius: ringRadius });
     } else if (desiredLayout === 'stack') {
       await actions.resetStack();
     }
-  }, [desiredLayout, actualLayout]);
+  }, [desiredLayout, actualLayout, ringRadius]);
 
   const handleShuffle = useCallback(async () => {
     const actions = actionsRef.current;
@@ -276,14 +335,20 @@ export default function Page() {
   const handleRing = useCallback(() => {
     setDesiredLayout('ring');
     console.log('[Page] handleRing -> desiredLayout set to ring');
-    void actionsRef.current?.ring();
-  }, []);
+    void actionsRef.current?.ring({ radius: ringRadius });
+  }, [ringRadius]);
 
   const handleStack = useCallback(() => {
     setDesiredLayout('stack');
     console.log('[Page] handleStack -> desiredLayout set to stack');
     void actionsRef.current?.resetStack();
   }, []);
+
+  useEffect(() => {
+    if (actualLayout === 'ring' && actionsRef.current) {
+      void actionsRef.current.ring({ radius: ringRadius });
+    }
+  }, [actualLayout, ringRadius]);
 
   const handleDeckStateChange = useCallback((state: DeckState) => {
     setDrawnCards(state.drawnCards);
@@ -406,12 +471,13 @@ export default function Page() {
       </section>
 
       <section className="demo-main">
-        <div className="deck-container">
+        <div className="deck-container" style={deckContainerStyle}>
           <DeckView
             key={deckSize}
             cards={cards}
             autoFan
             drawLimit={drawLimit}
+            ringRadius={ringRadius}
             defaultBackAsset={defaultBackAsset}
             onDeckReady={(actions) => {
               actionsRef.current = actions;

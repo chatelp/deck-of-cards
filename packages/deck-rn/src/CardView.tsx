@@ -3,6 +3,9 @@ import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CardViewProps } from './types';
 
+export const CARD_WIDTH = 160;
+export const CARD_HEIGHT = 240;
+
 export const CardView: React.FC<CardViewProps> = ({
   state,
   layout,
@@ -14,14 +17,14 @@ export const CardView: React.FC<CardViewProps> = ({
   style
 }) => {
   const rotation = useSharedValue(layout.rotation);
-  const translateX = useSharedValue(layout.x);
-  const translateY = useSharedValue(layout.y);
+  const translateX = useSharedValue(layout.x - CARD_WIDTH / 2);
+  const translateY = useSharedValue(layout.y - CARD_HEIGHT / 2);
   const scale = useSharedValue(layout.scale);
 
   useEffect(() => {
     rotation.value = withTiming(layout.rotation, { duration: 250 });
-    translateX.value = withTiming(layout.x, { duration: 250 });
-    translateY.value = withTiming(layout.y, { duration: 250 });
+    translateX.value = withTiming(layout.x - CARD_WIDTH / 2, { duration: 250 });
+    translateY.value = withTiming(layout.y - CARD_HEIGHT / 2, { duration: 250 });
     scale.value = withTiming(layout.scale, { duration: 250 });
   }, [layout, rotation, translateX, translateY, scale]);
 
@@ -59,11 +62,13 @@ export const CardView: React.FC<CardViewProps> = ({
 
 const styles = StyleSheet.create({
   pressable: {
-    position: 'absolute'
+    position: 'absolute',
+    left: '50%',
+    top: '50%'
   },
   card: {
-    width: 160,
-    height: 240,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     borderRadius: 12,
     backgroundColor: '#fff',
     backfaceVisibility: 'hidden',

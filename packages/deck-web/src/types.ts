@@ -6,6 +6,7 @@ import {
   CardState,
   CardTransform,
   DeckState,
+  RingOptions,
   ShuffleOptions
 } from '@deck/core';
 
@@ -31,7 +32,7 @@ export interface CardViewProps {
 
 export interface DeckViewActions {
   fan: () => Promise<void>;
-  ring: () => Promise<void>;
+  ring: (options?: RingOptions) => Promise<void>;
   shuffle: (options?: ShuffleOptions) => Promise<void>;
   flip: (cardId: string) => Promise<void>;
   animateTo: (cardId: string, target: CardAnimationTarget) => Promise<void>;
@@ -55,4 +56,5 @@ export interface DeckViewProps {
   onDeckReady?: (actions: DeckViewActions) => void;
   className?: string;
   defaultBackAsset?: string;
+  ringRadius?: number;
 }

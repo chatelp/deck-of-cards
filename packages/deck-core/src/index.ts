@@ -46,3 +46,6 @@ export { DeckObservable } from './observable.js';
 export { resolveCardBackAsset } from './assets.js';
 
 export { DEFAULT_CARD_BACK_ASSET, CARD_BACK_ASSETS } from './defaultAssets.js';
+
+export type { CardDimensions, DeckBounds } from './geometry.js';
+export { calculateDeckBounds } from './geometry.js';

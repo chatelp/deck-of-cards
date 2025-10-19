@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, Image, Text } from 'react-native';
+import { View, StyleSheet, Image, Text, LayoutChangeEvent, ViewStyle } from 'react-native';
 import {
   AnimationDriver,
   CardData,
@@ -7,11 +7,14 @@ import {
   CardState,
   DeckState,
   NoopAnimationDriver,
+  calculateDeckBounds,
   resolveCardBackAsset,
   useDeck
 } from '@deck/core';
-import { CardView } from './CardView';
+import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
+
+const BOUNDARY_PADDING = 24;
 
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
@@ -25,15 +28,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
   renderCardBack,
   drawLimit,
   defaultBackAsset,
+  ringRadius,
   autoFan = false,
   style,
   onDeckReady
 }) => {
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const animationDriver: AnimationDriver = useMemo(
     () => driver ?? new NoopAnimationDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset });
+  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
   const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
   const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
 
@@ -73,6 +78,66 @@ export const DeckView: React.FC<DeckViewProps> = ({
   useEffect(() => {
     onDeckStateChange?.(deck);
   }, [deck, onDeckStateChange]);
+
+  const deckBounds = useMemo(
+    () =>
+      calculateDeckBounds(deck.cards, deck.positions, {
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT
+      }),
+    [deck.cards, deck.positions]
+  );
+
+  const canvasTransform = useMemo(() => {
+    if (deckBounds.width === 0 || deckBounds.height === 0) {
+      return { translateX: 0, translateY: 0, scale: 1 };
+    }
+    const paddedWidth = deckBounds.width + BOUNDARY_PADDING * 2;
+    const paddedHeight = deckBounds.height + BOUNDARY_PADDING * 2;
+    const { width: availableWidth, height: availableHeight } = containerSize;
+    if (availableWidth <= 0 || availableHeight <= 0) {
+      return {
+        translateX: -deckBounds.centerX,
+        translateY: -deckBounds.centerY,
+        scale: 1
+      };
+    }
+    const scaleX = availableWidth / paddedWidth;
+    const scaleY = availableHeight / paddedHeight;
+    const scale = Math.min(1, scaleX, scaleY);
+    return {
+      translateX: -deckBounds.centerX,
+      translateY: -deckBounds.centerY,
+      scale: Number.isFinite(scale) && scale > 0 ? scale : 1
+    };
+  }, [deckBounds, containerSize]);
+
+  const canvasTransformStyle = useMemo<ViewStyle>(() => {
+    const transforms: any[] = [];
+    if (canvasTransform.translateX !== 0) {
+      transforms.push({ translateX: canvasTransform.translateX });
+    }
+    if (canvasTransform.translateY !== 0) {
+      transforms.push({ translateY: canvasTransform.translateY });
+    }
+    if (canvasTransform.scale !== 1) {
+      transforms.push({ scale: canvasTransform.scale });
+    }
+    if (transforms.length === 0) {
+      return {};
+    }
+    return { transform: transforms };
+  }, [canvasTransform]);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setContainerSize((prev) => {
+      if (prev.width === width && prev.height === height) {
+        return prev;
+      }
+      return { width, height };
+    });
+  }, []);
 
   useEffect(() => {
     deck.cards.forEach((card) => {
@@ -117,28 +182,30 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
   return (
-    <View style={[styles.container, style]}>
-      {deck.cards.map((card) => (
-        <CardView
-          key={card.id}
-          state={card}
-          layout={layout[card.id] as CardLayout}
-          isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-          onFlip={async () => {
-            await flip(card.id);
-            onFlipCard?.(card.id, !card.faceUp);
-          }}
-          onSelect={async () => {
-            const drawn = await drawCard(card.id);
-            if (drawn) {
-              onSelectCard?.(card.id, true);
-              onDrawCard?.(drawn as CardState);
-            }
-          }}
-          renderFace={renderCardFace}
-          renderBack={effectiveRenderBack}
-        />
-      ))}
+    <View style={[styles.container, style]} onLayout={handleLayout}>
+      <View style={[styles.deckCanvas, canvasTransformStyle]}>
+        {deck.cards.map((card) => (
+          <CardView
+            key={card.id}
+            state={card}
+            layout={layout[card.id] as CardLayout}
+            isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+            onFlip={async () => {
+              await flip(card.id);
+              onFlipCard?.(card.id, !card.faceUp);
+            }}
+            onSelect={async () => {
+              const drawn = await drawCard(card.id);
+              if (drawn) {
+                onSelectCard?.(card.id, true);
+                onDrawCard?.(drawn as CardState);
+              }
+            }}
+            renderFace={renderCardFace}
+            renderBack={effectiveRenderBack}
+          />
+        ))}
+      </View>
     </View>
   );
 };
@@ -146,6 +213,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1
+  },
+  deckCanvas: {
+    ...StyleSheet.absoluteFillObject
   },
   cardBackWrapper: {
     flex: 1,
