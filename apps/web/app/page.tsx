@@ -281,16 +281,29 @@ export default function Page() {
 
   const handleRestart = useCallback(() => {
     const newSeed = Date.now();
+    const layoutToRestore = actualLayout; // preserve current layout
     setCardsSeed(newSeed);
     setDrawnCards([]);
     setFaceUp({});
     setSelected(null);
-    setDesiredLayout('fan');
+    // do not change desiredLayout; re-apply the current layout after resetting
     setTimeout(() => {
-      actionsRef.current?.resetStack();
-      actionsRef.current?.fan();
+      const actions = actionsRef.current;
+      if (!actions) {
+        return;
+      }
+      // always resetStack first to rebuild positions smoothly
+      void actions.resetStack().then(() => {
+        if (layoutToRestore === 'fan') {
+          void actions.fan();
+        } else if (layoutToRestore === 'ring') {
+          void actions.ring({ radius: ringRadius });
+        } else if (layoutToRestore === 'stack') {
+          // already stacked
+        }
+      });
     }, 60);
-  }, []);
+  }, [actualLayout, ringRadius]);
 
   const applyDesiredLayout = useCallback(async () => {
     const actions = actionsRef.current;
