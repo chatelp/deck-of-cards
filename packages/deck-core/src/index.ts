@@ -13,6 +13,7 @@ export type {
   AnimationStep,
   AnimationSequence,
   FanOptions,
+  RingOptions,
   ShuffleOptions,
   AnimateToOptions,
   FlipOptions,
@@ -32,9 +33,9 @@ export {
   getHandOrigin
 } from './state.js';
 
-export { computeFanLayout, computeStackLayout, computeLineLayout } from './layout.js';
+export { computeFanLayout, computeStackLayout, computeLineLayout, computeRingLayout } from './layout.js';
 
-export { fan, stack, shuffle, animateTo, flip } from './primitives.js';
+export { fan, stack, ring, shuffle, animateTo, flip } from './primitives.js';
 
 export { useDeck } from './useDeck.js';
 

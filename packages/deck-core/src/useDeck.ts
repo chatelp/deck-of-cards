@@ -12,7 +12,7 @@ import {
 } from './models';
 import { DeckObservable } from './observable';
 import { createDeckState, setDeckPositions, updateCardLayout, updateCardState } from './state';
-import { fan, stack, shuffle as shuffleDeck, flip as flipCard, animateTo as animateCard } from './primitives';
+import { fan, ring as ringDeck, stack, shuffle as shuffleDeck, flip as flipCard, animateTo as animateCard } from './primitives';
 
 interface DeckReducerAction {
   type: 'SET_STATE' | 'UPDATE_STATE';
@@ -42,7 +42,8 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     config?.fanRadius,
     config?.spacing,
     config?.seed,
-    config?.defaultBackAsset
+    config?.defaultBackAsset,
+    config?.ringRadius
   ]);
 
   const initialState = useMemo(() => createDeckState(cards, normalizedConfig), [cards, normalizedConfig]);
@@ -72,6 +73,12 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
   const resetStack = useCallback(async () => {
     const { deck: nextDeck, sequence } = stack(deck);
     await applySequence(nextDeck, sequence);
+  }, [deck, applySequence]);
+
+  const ring = useCallback(async () => {
+    const { deck: nextDeck, sequence } = ringDeck(deck);
+    await applySequence(nextDeck, sequence);
+    observable.emit({ type: 'ring', payload: { layouts: nextDeck.positions } });
   }, [deck, applySequence]);
 
   const shuffle = useCallback(
@@ -156,7 +163,21 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
         drawnCards: [...deck.drawnCards, drawnCard]
       };
 
-      const { deck: nextDeck, sequence } = fan(baseDeck);
+      let layoutResult:
+        | ReturnType<typeof fan>
+        | ReturnType<typeof ringDeck>
+        | ReturnType<typeof stack>
+        | undefined;
+      if (deck.layoutMode === 'ring') {
+        layoutResult = ringDeck(baseDeck);
+      } else if (deck.layoutMode === 'stack') {
+        layoutResult = stack(baseDeck);
+      } else if (deck.layoutMode === 'fan') {
+        layoutResult = fan(baseDeck);
+      } else {
+        layoutResult = fan(baseDeck);
+      }
+      const { deck: nextDeck, sequence } = layoutResult;
       dispatch({ type: 'SET_STATE', payload: nextDeck });
       void driver.play(sequence).catch((error) => {
         console.error('[useDeck] drawCard animation error', error);
@@ -191,6 +212,7 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
   return {
     deck,
     fan: fanOut,
+    ring,
     shuffle,
     flip,
     animateTo,

@@ -48,9 +48,10 @@ export interface DeckStateConfig {
   seed?: number;
   drawLimit?: number;
   defaultBackAsset?: string | number;
+  ringRadius?: number;
 }
 
-export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'custom';
+export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'ring' | 'custom';
 
 export interface ResolvedDeckStateConfig {
   fanAngle: number;
@@ -59,6 +60,7 @@ export interface ResolvedDeckStateConfig {
   seed: number;
   drawLimit: number;
   defaultBackAsset?: string | number;
+  ringRadius: number;
 }
 
 export interface DeckState {
@@ -96,6 +98,12 @@ export interface FanOptions {
   radius?: number;
 }
 
+export interface RingOptions {
+  origin?: Vector2;
+  radius?: number;
+  startAngle?: number;
+}
+
 export interface ShuffleOptions {
   iterations?: number;
   seed?: number;
@@ -119,6 +127,7 @@ export interface DeckEventMap {
   flip: { cardId: CardId; faceUp: boolean };
   shuffle: { order: CardId[] };
   fan: { layouts: Record<CardId, CardLayout> };
+  ring: { layouts: Record<CardId, CardLayout> };
   draw: { cardId: CardId; card: CardState };
 }
 

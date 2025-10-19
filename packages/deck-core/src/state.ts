@@ -15,7 +15,8 @@ const defaultConfig: ResolvedDeckStateConfig = {
   spacing: 24,
   seed: Date.now(),
   drawLimit: 2,
-  defaultBackAsset: undefined
+  defaultBackAsset: undefined,
+  ringRadius: 260
 };
 
 export function createDeckState(cards: CardData[], config: DeckStateConfig = {}): DeckState {

@@ -1,4 +1,4 @@
-import { CardId, CardLayout, DeckState, FanOptions } from './models';
+import { CardId, CardLayout, DeckState, FanOptions, RingOptions } from './models';
 import { getHandOrigin } from './state';
 
 export function computeFanLayout(deck: DeckState, options: FanOptions = {}): Record<CardId, CardLayout> {
@@ -51,6 +51,33 @@ export function computeLineLayout(deck: DeckState, spacing = deck.config.spacing
       x,
       y,
       rotation: 0,
+      scale: 1,
+      zIndex: index
+    };
+  });
+  return layouts;
+}
+
+export function computeRingLayout(deck: DeckState, options: RingOptions = {}): Record<CardId, CardLayout> {
+  const { cards, config } = deck;
+  const origin = options.origin ?? { x: 0, y: 0 };
+  const radius = options.radius ?? config.ringRadius ?? config.fanRadius;
+  const startAngle = options.startAngle ?? -Math.PI / 2; // top center
+
+  const layouts: Record<CardId, CardLayout> = {};
+  if (cards.length === 0) {
+    return layouts;
+  }
+  const step = (Math.PI * 2) / cards.length;
+  cards.forEach((card, index) => {
+    const angle = startAngle + step * index;
+    const x = origin.x + radius * Math.cos(angle);
+    const y = origin.y + radius * Math.sin(angle);
+    const rotation = (angle * 180) / Math.PI + 90;
+    layouts[card.id] = {
+      x,
+      y,
+      rotation,
       scale: 1,
       zIndex: index
     };

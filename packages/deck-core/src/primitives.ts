@@ -5,10 +5,11 @@ import {
   CardTransform,
   DeckLayoutMode,
   DeckState,
+  RingOptions,
   FlipOptions,
   ShuffleOptions
 } from './models';
-import { computeFanLayout, computeStackLayout } from './layout';
+import { computeFanLayout, computeRingLayout, computeStackLayout } from './layout';
 import { setDeckLayoutMode, setDeckPositions, updateCardState, updateCardLayout } from './state';
 import { shuffleArray } from './shuffle';
 
@@ -23,6 +24,21 @@ export function fan(deck: DeckState): { deck: DeckState; sequence: AnimationSequ
   };
   return {
     deck: setDeckLayoutMode(setDeckPositions(deck, layouts), 'fan'),
+    sequence
+  };
+}
+
+export function ring(deck: DeckState, options: RingOptions = {}): { deck: DeckState; sequence: AnimationSequence } {
+  const layouts = computeRingLayout(deck, options);
+  const sequence: AnimationSequence = {
+    steps: Object.entries(layouts).map(([cardId, target], index) => ({
+      cardId,
+      target: { ...target, duration: 420, easing: 'easeOut', delay: index * 10 }
+    })),
+    stagger: 10
+  };
+  return {
+    deck: setDeckLayoutMode(setDeckPositions(deck, layouts), 'ring'),
     sequence
   };
 }
@@ -53,7 +69,9 @@ export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: 
 
   const finalLayouts = targetLayout === 'fan'
     ? computeFanLayout({ ...deck, cards })
-    : stackLayouts;
+    : targetLayout === 'ring'
+      ? computeRingLayout({ ...deck, cards })
+      : stackLayouts;
 
   const sequence: AnimationSequence = {
     steps: cards.map((card, index) => {

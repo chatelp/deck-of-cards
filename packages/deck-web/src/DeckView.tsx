@@ -33,7 +33,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset });
-  const { deck, fan, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
+  const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
   const [loadedBackAssets, setLoadedBackAssets] = useState<Record<string, boolean>>({});
 
   // Initial fan is handled by the next effect on first render (cards.length stable)
@@ -44,12 +44,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
     if (!autoFan) {
       return;
     }
+    if (deck.layoutMode === 'ring') {
+      return;
+    }
     if (lastFannedLengthRef.current === deck.cards.length) {
       return;
     }
     lastFannedLengthRef.current = deck.cards.length;
     void fan();
-  }, [autoFan, deck.cards.length, fan]);
+  }, [autoFan, deck.cards.length, deck.layoutMode, fan]);
 
   useEffect(() => {
     if (onDeckReady) {
@@ -58,6 +61,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
       };
       onDeckReady({
         fan,
+        ring,
         shuffle,
         flip,
         animateTo: wrappedAnimateTo,
@@ -66,7 +70,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
         resetStack
       });
     }
-  }, [onDeckReady, fan, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
+  }, [onDeckReady, fan, ring, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
 
   useEffect(() => {
     onDeckStateChange?.(deck);

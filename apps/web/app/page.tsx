@@ -186,7 +186,7 @@ export default function Page() {
   const [deckSize, setDeckSize] = useState<number>(10);
   const [drawLimit, setDrawLimit] = useState<number>(2);
   const [cardsSeed, setCardsSeed] = useState<number>(0);
-  type LayoutMode = 'fan' | 'stack';
+  type LayoutMode = 'fan' | 'stack' | 'ring';
   const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
   const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
@@ -244,6 +244,8 @@ export default function Page() {
     }
     if (desiredLayout === 'fan') {
       await actions.fan();
+    } else if (desiredLayout === 'ring') {
+      await actions.ring();
     } else if (desiredLayout === 'stack') {
       await actions.resetStack();
     }
@@ -271,6 +273,12 @@ export default function Page() {
     void actionsRef.current?.fan();
   }, []);
 
+  const handleRing = useCallback(() => {
+    setDesiredLayout('ring');
+    console.log('[Page] handleRing -> desiredLayout set to ring');
+    void actionsRef.current?.ring();
+  }, []);
+
   const handleStack = useCallback(() => {
     setDesiredLayout('stack');
     console.log('[Page] handleStack -> desiredLayout set to stack');
@@ -288,7 +296,7 @@ export default function Page() {
     });
     setFaceUp(nextFaceUp);
 
-    if (state.layoutMode === 'fan' || state.layoutMode === 'stack') {
+    if (state.layoutMode === 'fan' || state.layoutMode === 'stack' || state.layoutMode === 'ring') {
       setActualLayout(state.layoutMode);
       console.log('[Page] onDeckStateChange layout', { layoutMode: state.layoutMode });
     }
@@ -325,6 +333,9 @@ export default function Page() {
         </label>
         <button type="button" onClick={handleFan}>
           Fan
+        </button>
+        <button type="button" onClick={handleRing}>
+          Ring
         </button>
         <button type="button" onClick={handleStack}>
           Stack

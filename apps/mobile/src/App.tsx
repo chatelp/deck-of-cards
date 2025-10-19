@@ -3,7 +3,7 @@ import { SafeAreaView, StyleSheet, StatusBar, View, Text, Button } from 'react-n
 import { DeckView, DeckViewActions } from '@deck/rn';
 import { CardData } from '@deck/core';
 
-const CARD_BACK_LIGHT = require('./assets/cards/card-back-light.png');
+const CARD_BACK_LIGHT = require('../assets/cards/card-back-light.png');
 
 const cards: CardData[] = Array.from({ length: 10 }).map((_, index) => ({
   id: `card-${index}`,
@@ -27,6 +27,7 @@ export default function App() {
       <View style={styles.controls}>
         <Button title="Shuffle" onPress={() => deckActions.current?.shuffle()} />
         <Button title="Fan" onPress={() => deckActions.current?.fan()} />
+        <Button title="Ring" onPress={() => deckActions.current?.ring()} />
         <Button title="Stack" onPress={() => deckActions.current?.resetStack()} />
       </View>
       <View style={styles.deckContainer}>
