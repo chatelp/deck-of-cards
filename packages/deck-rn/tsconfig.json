@@ -6,7 +6,12 @@
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-    "types": ["react", "react-native"]
+    "types": ["react", "react-native"],
+    "baseUrl": ".",
+    "paths": {
+      "react-native-reanimated": ["../../apps/mobile/node_modules/react-native-reanimated"],
+      "react-native-reanimated/*": ["../../apps/mobile/node_modules/react-native-reanimated/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "../deck-core" }]

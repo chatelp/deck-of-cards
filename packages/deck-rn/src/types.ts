@@ -25,6 +25,7 @@ export interface CardViewProps {
   layout: CardLayout;
   isSelected: boolean;
   style?: StyleProp<ViewStyle>;
+  driver?: AnimationDriver;
   onFlip?: () => void | Promise<void>;
   onSelect?: () => void | Promise<void>;
   renderFace: (props: CardRenderProps) => ReactNode;

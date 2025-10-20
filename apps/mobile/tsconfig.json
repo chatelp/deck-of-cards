@@ -6,6 +6,6 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src", "app"],
+  "include": ["src", "app", "App.tsx", "index.ts"],
   "exclude": ["node_modules", "dist"]
 }

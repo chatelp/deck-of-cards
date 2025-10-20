@@ -6,15 +6,13 @@ import {
   CardLayout,
   CardState,
   DeckState,
-  NoopAnimationDriver,
   calculateDeckBounds,
   resolveCardBackAsset,
   useDeck
 } from '@deck/core';
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
+import { ReanimatedDriver } from './drivers/ReanimatedDriver';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
-
-const BOUNDARY_PADDING = 24;
 
 export const DeckView: React.FC<DeckViewProps> = ({
   cards,
@@ -35,7 +33,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
 }) => {
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const animationDriver: AnimationDriver = useMemo(
-    () => driver ?? new NoopAnimationDriver(),
+    () => driver ?? new ReanimatedDriver(),
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
@@ -88,46 +86,69 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [deck.cards, deck.positions]
   );
 
-  const canvasTransform = useMemo(() => {
-    if (deckBounds.width === 0 || deckBounds.height === 0) {
-      return { translateX: 0, translateY: 0, scale: 1 };
+  const layoutPadding = useMemo(() => {
+    switch (deck.layoutMode) {
+      case 'ring':
+        return CARD_HEIGHT * 0.38;
+      case 'fan':
+        return CARD_HEIGHT * 0.28;
+      case 'stack':
+        return CARD_HEIGHT * 0.2;
+      default:
+        return CARD_HEIGHT * 0.24;
     }
-    const paddedWidth = deckBounds.width + BOUNDARY_PADDING * 2;
-    const paddedHeight = deckBounds.height + BOUNDARY_PADDING * 2;
+  }, [deck.layoutMode]);
+
+  const deckTransform = useMemo(() => {
     const { width: availableWidth, height: availableHeight } = containerSize;
-    if (availableWidth <= 0 || availableHeight <= 0) {
+    if (
+      deckBounds.width === 0 ||
+      deckBounds.height === 0 ||
+      availableWidth <= 0 ||
+      availableHeight <= 0
+    ) {
       return {
-        translateX: -deckBounds.centerX,
-        translateY: -deckBounds.centerY,
-        scale: 1
+        scale: 1,
+        translateToOriginX: 0,
+        translateToOriginY: 0,
+        translateToCenterX: availableWidth / 2,
+        translateToCenterY: availableHeight / 2
       };
     }
+
+    const paddedWidth = deckBounds.width + layoutPadding * 2;
+    const paddedHeight = deckBounds.height + layoutPadding * 2;
     const scaleX = availableWidth / paddedWidth;
     const scaleY = availableHeight / paddedHeight;
-    const scale = Math.min(1, scaleX, scaleY);
-    return {
-      translateX: -deckBounds.centerX,
-      translateY: -deckBounds.centerY,
-      scale: Number.isFinite(scale) && scale > 0 ? scale : 1
-    };
-  }, [deckBounds, containerSize]);
+    let scale = Math.min(scaleX, scaleY, 1);
+    if (deck.layoutMode === 'ring') {
+      scale *= 0.92;
+    } else if (deck.layoutMode === 'fan') {
+      scale *= 0.96;
+    }
 
-  const canvasTransformStyle = useMemo<ViewStyle>(() => {
-    const transforms: any[] = [];
-    if (canvasTransform.translateX !== 0) {
-      transforms.push({ translateX: canvasTransform.translateX });
+    return {
+      scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+      translateToOriginX: -deckBounds.centerX,
+      translateToOriginY: -deckBounds.centerY,
+      translateToCenterX: availableWidth / 2,
+      translateToCenterY: availableHeight / 2
+    };
+  }, [deckBounds, containerSize, layoutPadding, deck.layoutMode]);
+
+  const deckTransformStyle = useMemo<ViewStyle>(() => {
+    const transforms: NonNullable<ViewStyle['transform']> = [];
+    if (deckTransform.translateToOriginX !== 0 || deckTransform.translateToOriginY !== 0) {
+      transforms.push({ translateX: deckTransform.translateToOriginX });
+      transforms.push({ translateY: deckTransform.translateToOriginY });
     }
-    if (canvasTransform.translateY !== 0) {
-      transforms.push({ translateY: canvasTransform.translateY });
+    if (deckTransform.scale !== 1) {
+      transforms.push({ scale: deckTransform.scale });
     }
-    if (canvasTransform.scale !== 1) {
-      transforms.push({ scale: canvasTransform.scale });
-    }
-    if (transforms.length === 0) {
-      return {};
-    }
+    transforms.push({ translateX: deckTransform.translateToCenterX });
+    transforms.push({ translateY: deckTransform.translateToCenterY });
     return { transform: transforms };
-  }, [canvasTransform]);
+  }, [deckTransform]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -183,13 +204,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
-      <View style={[styles.deckCanvas, canvasTransformStyle]}>
+      <View style={[styles.deckCanvas, deckTransformStyle]}>
         {deck.cards.map((card) => (
           <CardView
             key={card.id}
             state={card}
             layout={layout[card.id] as CardLayout}
             isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+            driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
             onFlip={async () => {
               await flip(card.id);
               onFlipCard?.(card.id, !card.faceUp);
@@ -230,18 +252,17 @@ const styles = StyleSheet.create({
   cardBackOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 12,
-    borderWidth: 16,
-    borderColor: 'rgba(10, 12, 22, 0.5)'
+    backgroundColor: 'rgba(9, 13, 24, 0.35)'
   },
   cardBackHighlight: {
     position: 'absolute',
-    top: '15%',
-    left: '15%',
-    right: '15%',
-    bottom: '35%',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 10,
-    opacity: 0.85
+    top: '12%',
+    left: '12%',
+    right: '12%',
+    bottom: '38%',
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 12,
+    opacity: 0.6
   },
   cardBackPlaceholder: {
     backgroundColor: '#1f2937'

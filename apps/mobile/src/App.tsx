@@ -1,34 +1,266 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { SafeAreaView, StyleSheet, StatusBar, View, Text, Button, useWindowDimensions } from 'react-native';
-import { DeckView, DeckViewActions } from '@deck/rn';
-import { CardData } from '@deck/core';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  StatusBar,
+  View,
+  Text,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  useWindowDimensions
+} from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { DeckView, DeckViewActions, CARD_HEIGHT } from '@deck/rn';
+import { CardData, CardState, DeckState } from '@deck/core';
 
 const CARD_BACK_LIGHT = require('../assets/cards/card-back-light.png');
+const CARD_BACK_DARK = require('../assets/cards/card-back-dark.png');
 
-const cards: CardData[] = Array.from({ length: 10 }).map((_, index) => ({
+const CARD_BACK_OPTIONS = [
+  { id: 'light', label: 'Light', asset: CARD_BACK_LIGHT },
+  { id: 'dark', label: 'Dark', asset: CARD_BACK_DARK }
+] as const;
+
+type CardBackOptionId = (typeof CARD_BACK_OPTIONS)[number]['id'];
+type LayoutMode = 'fan' | 'ring' | 'stack';
+
+interface YiJingCard extends CardData {
+  hexagram: string;
+  meaning: string;
+  backAsset?: number;
+}
+
+const yiJingHexagrams = [
+  '䷀',
+  '䷁',
+  '䷂',
+  '䷃',
+  '䷄',
+  '䷅',
+  '䷆',
+  '䷇',
+  '䷈',
+  '䷉',
+  '䷊',
+  '䷋',
+  '䷌',
+  '䷍',
+  '䷎',
+  '䷏',
+  '䷐',
+  '䷑',
+  '䷒',
+  '䷓',
+  '䷔',
+  '䷕',
+  '䷖',
+  '䷗',
+  '䷘',
+  '䷙',
+  '䷚',
+  '䷛',
+  '䷜',
+  '䷝',
+  '䷞',
+  '䷟',
+  '䷠',
+  '䷡',
+  '䷢',
+  '䷣',
+  '䷤',
+  '䷥',
+  '䷦',
+  '䷧',
+  '䷨',
+  '䷩',
+  '䷪',
+  '䷫',
+  '䷬',
+  '䷭',
+  '䷮',
+  '䷯',
+  '䷰',
+  '䷱',
+  '䷲',
+  '䷳',
+  '䷴',
+  '䷵',
+  '䷶',
+  '䷷',
+  '䷸',
+  '䷹',
+  '䷺',
+  '䷻',
+  '䷼',
+  '䷽',
+  '䷾',
+  '䷿'
+];
+
+const yiJingMeanings = [
+  'The Creative',
+  'The Receptive',
+  'Difficulty at the Beginning',
+  'Youthful Folly',
+  'Waiting',
+  'Conflict',
+  'The Army',
+  'Holding Together',
+  'Small Taming',
+  'Treading',
+  'Peace',
+  'Standstill',
+  'Fellowship',
+  'Great Possession',
+  'Modesty',
+  'Enthusiasm',
+  'Following',
+  'Work on What Has Been Spoiled',
+  'Approach',
+  'Contemplation',
+  'Biting Through',
+  'Grace',
+  'Splitting Apart',
+  'Return',
+  'The Innocent',
+  'Great Taming',
+  'Great Accumulating',
+  'The Corners of the Mouth',
+  'The Abysmal',
+  'The Clinging',
+  'Influence',
+  'Duration',
+  'Retreat',
+  'Great Power',
+  'Progress',
+  'Darkening of the Light',
+  'Family',
+  'Opposition',
+  'Obstruction',
+  'Deliverance',
+  'Decrease',
+  'Increase',
+  'Breakthrough',
+  'Coming to Meet',
+  'Gathering Together',
+  'Pushing Upward',
+  'Oppression',
+  'The Well',
+  'Revolution',
+  'The Cauldron',
+  'The Arousing',
+  'Keeping Still',
+  'Development',
+  'Marrying Maiden',
+  'Abundance',
+  'The Wanderer',
+  'The Gentle',
+  'The Joyous',
+  'Dispersion',
+  'Limitation',
+  'Inner Truth',
+  'Small Preponderance',
+  'After Completion',
+  'Before Completion'
+];
+
+const allYiJingCards: YiJingCard[] = Array.from({ length: 64 }).map((_, index) => ({
   id: `card-${index}`,
-  name: `Card ${index + 1}`,
-  backAsset: CARD_BACK_LIGHT
+  name: `Hexagram ${index + 1}`,
+  hexagram: yiJingHexagrams[index],
+  meaning: yiJingMeanings[index]
 }));
 
+function seededRandom(seed: number): () => number {
+  let value = seed % 2147483647;
+  if (value <= 0) {
+    value += 2147483646;
+  }
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+}
+
+function shuffleWithSeed<T>(source: T[], seed: number): T[] {
+  const result = [...source];
+  const random = seededRandom(seed);
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+interface ActionButtonProps {
+  label: string;
+  onPress: () => void;
+  active?: boolean;
+  disabled?: boolean;
+}
+
+const ActionButton: React.FC<ActionButtonProps> = ({ label, onPress, active = false, disabled = false }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    disabled={disabled}
+    style={[styles.actionButton, active && styles.actionButtonActive, disabled && styles.actionButtonDisabled]}
+  >
+    <Text style={[styles.actionButtonText, active && styles.actionButtonTextActive, disabled && styles.actionButtonTextDisabled]}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+interface OptionButtonProps {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}
+
+const OptionButton: React.FC<OptionButtonProps> = ({ label, active, onPress }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.optionButton, active && styles.optionButtonActive]}>
+    <Text style={[styles.optionButtonText, active && styles.optionButtonTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 export default function App() {
-  const deckActions = useRef<DeckViewActions | null>(null);
-  const [layoutMode, setLayoutMode] = useState<'fan' | 'ring' | 'stack'>('fan');
   const { width: viewportWidth } = useWindowDimensions();
+  const deckActions = useRef<DeckViewActions | null>(null);
+  const [cardsSeed, setCardsSeed] = useState<number>(() => Date.now());
+  const [drawLimit, setDrawLimit] = useState<number>(2);
+  const [deckSize, setDeckSize] = useState<number>(10);
+  const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
+  const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
+  const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
+  const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
+  const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
+  const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      deckActions.current?.fan();
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+  const defaultBackAsset = useMemo(
+    () => CARD_BACK_OPTIONS.find((option) => option.id === cardBackOption)?.asset ?? CARD_BACK_OPTIONS[0].asset,
+    [cardBackOption]
+  );
 
+  const cards = useMemo(() => {
+    const shuffled = shuffleWithSeed(allYiJingCards, cardsSeed);
+    const asset = defaultBackAsset;
+    return shuffled.slice(0, deckSize).map((card) => ({
+      ...card,
+      backAsset: asset
+    }));
+  }, [deckSize, cardsSeed, defaultBackAsset]);
+
+  const remainingCount = cards.length - drawnCards.length;
+  const faceUpCount = Object.values(faceUp).filter(Boolean).length;
+  const selectedCard = drawnCards.find((card) => card.id === selectedCardId) ?? null;
   const layoutMetrics = useMemo(() => {
-    const safeWidth = Math.max(280, viewportWidth - 32);
-    if (layoutMode === 'ring') {
-      const maxWidth = Math.min(safeWidth, 360);
-      const padding = Math.max(16, maxWidth * 0.08);
-      const radius = Math.max(100, (maxWidth - padding * 2) / 2);
+    const safeWidth = Math.max(320, viewportWidth - 32);
+    if (actualLayout === 'ring') {
+      const maxWidth = Math.min(safeWidth, 420);
+      const padding = Math.max(12, maxWidth * 0.04);
+      const availableRadius = (maxWidth - padding * 2) / 2;
+      const radius = Math.max(80, availableRadius - CARD_HEIGHT / 2);
       return {
         style: {
           width: '100%',
@@ -39,9 +271,9 @@ export default function App() {
         ringRadius: radius
       };
     }
-    if (layoutMode === 'stack') {
-      const maxWidth = Math.min(safeWidth, 360);
-      const padding = Math.max(14, maxWidth * 0.06);
+    if (actualLayout === 'stack') {
+      const maxWidth = Math.min(safeWidth, 380);
+      const padding = Math.max(10, maxWidth * 0.035);
       return {
         style: {
           width: '100%',
@@ -52,93 +284,534 @@ export default function App() {
         ringRadius: undefined
       };
     }
-    const maxWidth = Math.min(safeWidth, 600);
-    const padding = Math.max(18, maxWidth * 0.05);
+    const maxWidth = Math.min(safeWidth, 640);
+    const padding = Math.max(14, maxWidth * 0.035);
     return {
       style: {
         width: '100%',
         maxWidth,
-        aspectRatio: 5 / 3,
+        aspectRatio: 4 / 3,
         padding
       } as const,
       ringRadius: undefined
     };
-  }, [layoutMode, viewportWidth]);
+  }, [actualLayout, viewportWidth]);
 
   const deckContainerStyle = useMemo(() => [styles.deckContainer, layoutMetrics.style], [layoutMetrics]);
+  const ringRadius = layoutMetrics.ringRadius;
+  const deckKey = useMemo(() => `${deckSize}-${cardsSeed}-${cardBackOption}`, [deckSize, cardsSeed, cardBackOption]);
+
+  const applyLayout = useCallback(
+    async (mode: LayoutMode) => {
+      const actions = deckActions.current;
+      if (!actions) {
+        return;
+      }
+      if (mode === 'fan') {
+        await actions.fan();
+      } else if (mode === 'ring') {
+        await actions.ring({ radius: ringRadius });
+      } else {
+        await actions.resetStack();
+      }
+    },
+    [ringRadius]
+  );
+
+  const handleShuffle = useCallback(async () => {
+    const actions = deckActions.current;
+    if (!actions) {
+      return;
+    }
+    await actions.shuffle({ restoreLayout: restoreLayoutAfterShuffle });
+    if (restoreLayoutAfterShuffle) {
+      await applyLayout(desiredLayout);
+    } else {
+      setDesiredLayout('stack');
+    }
+  }, [restoreLayoutAfterShuffle, applyLayout, desiredLayout]);
+
+  const handleFan = useCallback(() => {
+    setDesiredLayout('fan');
+    void applyLayout('fan');
+  }, [applyLayout]);
+
+  const handleRing = useCallback(() => {
+    setDesiredLayout('ring');
+    void applyLayout('ring');
+  }, [applyLayout]);
+
+  const handleStack = useCallback(() => {
+    setDesiredLayout('stack');
+    void applyLayout('stack');
+  }, [applyLayout]);
+
+  const handleRestart = useCallback(() => {
+    const newSeed = Date.now();
+    const layoutToRestore = actualLayout;
+    setCardsSeed(newSeed);
+    setDrawnCards([]);
+    setFaceUp({});
+    setSelectedCardId(null);
+    setTimeout(() => {
+      void applyLayout(layoutToRestore);
+    }, 50);
+  }, [actualLayout, applyLayout]);
+
+  const handleDeckStateChange = useCallback(
+    (state: DeckState) => {
+      setDrawnCards(state.drawnCards);
+      const nextFaceUp: Record<string, boolean> = {};
+      state.cards.forEach((card) => {
+        nextFaceUp[card.id] = card.faceUp;
+      });
+      state.drawnCards.forEach((card) => {
+        nextFaceUp[card.id] = card.faceUp;
+      });
+      setFaceUp(nextFaceUp);
+
+      if (state.layoutMode === 'fan' || state.layoutMode === 'ring' || state.layoutMode === 'stack') {
+        setActualLayout(state.layoutMode);
+      }
+
+      if (selectedCardId && !state.drawnCards.some((card) => card.id === selectedCardId)) {
+        setSelectedCardId(null);
+      }
+    },
+    [selectedCardId]
+  );
+
+  const handleDeckSizeChange = useCallback(
+    (nextSize: number) => {
+      const layoutToRestore = actualLayout;
+      setDeckSize(nextSize);
+      setDrawnCards([]);
+      setFaceUp({});
+      setSelectedCardId(null);
+      setTimeout(() => {
+        void applyLayout(layoutToRestore);
+      }, 50);
+    },
+    [actualLayout, applyLayout]
+  );
+
+  const handleDrawLimitChange = useCallback(
+    (nextLimit: number) => {
+      const layoutToRestore = actualLayout;
+      setDrawLimit(nextLimit);
+      setDrawnCards([]);
+      setFaceUp({});
+      setSelectedCardId(null);
+      setTimeout(() => {
+        void applyLayout(layoutToRestore);
+      }, 50);
+    },
+    [actualLayout, applyLayout]
+  );
 
   useEffect(() => {
-    if (layoutMode === 'ring') {
-      deckActions.current?.ring({ radius: layoutMetrics.ringRadius });
+    if (actualLayout === 'ring' && ringRadius) {
+      void deckActions.current?.ring({ radius: ringRadius });
     }
-  }, [layoutMode, layoutMetrics.ringRadius]);
+  }, [actualLayout, ringRadius]);
+
+  useEffect(() => {
+    if (deckActions.current == null) {
+      return;
+    }
+    void applyLayout(desiredLayout);
+  }, [desiredLayout, applyLayout]);
+
+  const handleSelectCard = useCallback((cardId: string, selected: boolean) => {
+    setSelectedCardId(selected ? cardId : null);
+  }, []);
+
+  const handleDrawCard = useCallback((card: CardState) => {
+    setDrawnCards((prev) => {
+      if (prev.some((existing) => existing.id === card.id)) {
+        return prev;
+      }
+      return [...prev, card];
+    });
+    setSelectedCardId(card.id);
+  }, []);
+
+  const handleFlipCard = useCallback((cardId: string, isFaceUp: boolean) => {
+    setFaceUp((prev) => ({ ...prev, [cardId]: isFaceUp }));
+  }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.controls}>
-        <Button title="Shuffle" onPress={() => deckActions.current?.shuffle()} />
-        <Button title="Fan" onPress={() => deckActions.current?.fan()} />
-        <Button
-          title="Ring"
-          onPress={() => deckActions.current?.ring({ radius: layoutMetrics.ringRadius })}
-        />
-        <Button title="Stack" onPress={() => deckActions.current?.resetStack()} />
-      </View>
-      <View style={deckContainerStyle}>
-        <DeckView
-          cards={cards}
-          autoFan
-          onDeckReady={(actions) => {
-            deckActions.current = actions;
-          }}
-          onDeckStateChange={(state) => {
-            if (state.layoutMode === 'ring' || state.layoutMode === 'fan' || state.layoutMode === 'stack') {
-              setLayoutMode(state.layoutMode);
-            }
-          }}
-          renderCardFace={({ data }) => (
-            <View style={[styles.cardFace, styles.card]}>
-              <Text style={styles.cardTitle}>{data.name}</Text>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Yi Jing Deck Prototype</Text>
+            <Text style={styles.subtitle}>Cross-platform animation base — React Native + Web</Text>
+          </View>
+
+          <View style={styles.deckSection}>
+            <View style={deckContainerStyle}>
+              <DeckView
+                key={deckKey}
+                cards={cards}
+                autoFan
+                drawLimit={drawLimit}
+                ringRadius={ringRadius}
+                defaultBackAsset={defaultBackAsset}
+                onDeckReady={(actions) => {
+                  deckActions.current = actions;
+                }}
+                onDeckStateChange={handleDeckStateChange}
+                onFlipCard={handleFlipCard}
+                onDrawCard={handleDrawCard}
+                onSelectCard={handleSelectCard}
+                renderCardFace={({ data }) => {
+                  const cardData = data as YiJingCard;
+                  return (
+                    <View style={[styles.cardFace, styles.card]}>
+                      <Text style={styles.cardHexagram}>{cardData.hexagram}</Text>
+                      <Text style={styles.cardTitle}>{cardData.name}</Text>
+                      <Text style={styles.cardMeaning}>{cardData.meaning}</Text>
+                    </View>
+                  );
+                }}
+              />
             </View>
-          )}
-          defaultBackAsset={CARD_BACK_LIGHT}
-          ringRadius={layoutMetrics.ringRadius}
-        />
-      </View>
-    </SafeAreaView>
+          </View>
+
+          <View style={styles.statsSection}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Initial</Text>
+              <Text style={styles.statValue}>{cards.length}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Remaining</Text>
+              <Text style={styles.statValue}>{remainingCount}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Drawn</Text>
+              <Text style={styles.statValue}>
+                {drawnCards.length} / {drawLimit}
+              </Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Face up</Text>
+              <Text style={styles.statValue}>
+                {faceUpCount} / {cards.length}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.controlsSection}>
+            <View style={styles.buttonRow}>
+              <ActionButton label="Shuffle" onPress={handleShuffle} />
+              <ActionButton label="Fan" onPress={handleFan} active={desiredLayout === 'fan'} />
+              <ActionButton label="Ring" onPress={handleRing} active={desiredLayout === 'ring'} />
+              <ActionButton label="Stack" onPress={handleStack} active={desiredLayout === 'stack'} />
+            </View>
+            <View style={styles.singleButtonRow}>
+              <ActionButton label="Restart" onPress={handleRestart} />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Restore layout after shuffle</Text>
+              <Switch
+                value={restoreLayoutAfterShuffle}
+                onValueChange={(value) => setRestoreLayoutAfterShuffle(value)}
+                thumbColor={restoreLayoutAfterShuffle ? '#2563eb' : '#6b7280'}
+                trackColor={{ true: '#60a5fa', false: '#374151' }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.optionSection}>
+            <Text style={styles.sectionLabel}>Deck size</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+              {[5, 10, 16, 24, 32, 48, 64].map((size) => (
+                <OptionButton key={size} label={`${size}`} active={deckSize === size} onPress={() => handleDeckSizeChange(size)} />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.optionSection}>
+            <Text style={styles.sectionLabel}>Draw limit</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((limit) => (
+                <OptionButton key={limit} label={`${limit}`} active={drawLimit === limit} onPress={() => handleDrawLimitChange(limit)} />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.optionSection}>
+            <Text style={styles.sectionLabel}>Card back</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
+              {CARD_BACK_OPTIONS.map((option) => (
+                <OptionButton
+                  key={option.id}
+                  label={option.label}
+                  active={cardBackOption === option.id}
+                  onPress={() => setCardBackOption(option.id)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.selectedSection}>
+            <Text style={styles.sectionLabel}>Selected card</Text>
+            {selectedCard ? (
+              <View style={styles.selectedCard}>
+                <Text style={styles.selectedHexagram}>{(selectedCard.data as YiJingCard).hexagram}</Text>
+                <Text style={styles.selectedName}>{selectedCard.data?.name}</Text>
+                <Text style={styles.selectedMeaning}>{(selectedCard.data as YiJingCard).meaning}</Text>
+              </View>
+            ) : (
+              <Text style={styles.emptyText}>No card selected yet</Text>
+            )}
+          </View>
+
+          <View style={styles.drawnSection}>
+            <Text style={styles.sectionLabel}>Drawn cards</Text>
+            {drawnCards.length === 0 ? (
+              <Text style={styles.emptyText}>No cards drawn yet</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.drawnRow}>
+                {drawnCards.map((card) => (
+                  <View key={card.id} style={styles.drawnCard}>
+                    <Text style={styles.drawnHexagram}>{(card.data as YiJingCard).hexagram}</Text>
+                    <Text style={styles.drawnName}>{card.data?.name}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111'
+    backgroundColor: '#0f172a'
   },
-  controls: {
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 48
+  },
+  header: {
+    paddingTop: 24,
+    paddingBottom: 12
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#f8fafc',
+    marginBottom: 4
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#cbd5f5'
+  },
+  controlsSection: {
+    marginTop: 16,
+    paddingVertical: 12
+  },
+  buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 16,
-    paddingHorizontal: 16
+    justifyContent: 'space-between',
+    marginBottom: 8
   },
-  deckContainer: {
+  singleButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8
+  },
+  actionButton: {
     flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#1f2937',
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  actionButtonActive: {
+    backgroundColor: '#2563eb'
+  },
+  actionButtonDisabled: {
+    opacity: 0.5
+  },
+  actionButtonText: {
+    color: '#e2e8f0',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  actionButtonTextActive: {
+    color: '#f8fafc'
+  },
+  actionButtonTextDisabled: {
+    color: '#94a3b8'
+  },
+  toggleRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4
+  },
+  toggleLabel: {
+    color: '#cbd5f5',
+    fontSize: 14,
+    flex: 1,
+    marginRight: 12
+  },
+  optionSection: {
+    marginTop: 16,
+    paddingVertical: 10
+  },
+  sectionLabel: {
+    color: '#f1f5f9',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8
+  },
+  optionRow: {
+    flexDirection: 'row'
+  },
+  optionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#1e293b',
+    marginRight: 8
+  },
+  optionButtonActive: {
+    backgroundColor: '#2563eb'
+  },
+  optionButtonText: {
+    color: '#cbd5f5',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  optionButtonTextActive: {
+    color: '#f8fafc'
+  },
+  deckSection: {
+    marginTop: 16
+  },
+  deckContainer: {
+    alignSelf: 'stretch',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: CARD_HEIGHT * 1.35
+  },
+  statsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingVertical: 12
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#1f2937',
+    marginHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center'
+  },
+  statLabel: {
+    color: '#cbd5f5',
+    fontSize: 12,
+    marginBottom: 4
+  },
+  statValue: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  selectedSection: {
+    marginTop: 16,
+    paddingVertical: 12
+  },
+  selectedCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    padding: 16
+  },
+  selectedHexagram: {
+    fontSize: 42,
+    textAlign: 'center',
+    marginBottom: 8
+  },
+  selectedName: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  selectedMeaning: {
+    color: '#cbd5f5',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4
+  },
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 14
+  },
+  drawnSection: {
+    marginTop: 16,
+    paddingVertical: 12
+  },
+  drawnRow: {
+    flexDirection: 'row'
+  },
+  drawnCard: {
+    backgroundColor: '#1f2937',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 8,
+    minWidth: 100,
+    alignItems: 'center'
+  },
+  drawnHexagram: {
+    fontSize: 26,
+    marginBottom: 6
+  },
+  drawnName: {
+    color: '#e2e8f0',
+    fontSize: 14,
+    textAlign: 'center'
   },
   card: {
     width: '100%',
     height: '100%',
     borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    padding: 12
   },
   cardFace: {
-    backgroundColor: '#fff'
+    backgroundColor: '#f8fafc'
+  },
+  cardHexagram: {
+    fontSize: 48,
+    color: '#0f172a',
+    marginBottom: 8
   },
   cardTitle: {
-    color: '#111',
-    fontSize: 18,
-    fontWeight: '600'
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  cardMeaning: {
+    fontSize: 12,
+    color: '#334155',
+    textAlign: 'center',
+    marginTop: 4
   }
 });
