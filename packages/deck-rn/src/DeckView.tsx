@@ -145,8 +145,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
     const basePaddingRatio = deck.layoutMode === 'ring' ? 0.16 : deck.layoutMode === 'fan' ? 0.12 : 0.08;
     const layoutPadding = Math.max(8, Math.min(cardHeight * basePaddingRatio, minDimension * 0.12));
     if (
-      deckBounds.width === 0 ||
-      deckBounds.height === 0 ||
+      deckBoundsBase.width === 0 ||
+      deckBoundsBase.height === 0 ||
       availableWidth <= 0 ||
       availableHeight <= 0
     ) {
