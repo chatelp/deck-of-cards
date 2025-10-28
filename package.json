@@ -12,6 +12,7 @@
     "dev": "turbo run dev --parallel",
     "dev:web": "pnpm -r --parallel --filter @deck/core --filter @deck/web --filter deck-web-app --filter !deck-mobile dev",
     "dev:mobile": "pnpm -r --parallel --filter @deck/core --filter @deck/rn --filter deck-mobile --filter !deck-web-app dev",
+    "dev:mobile:clean": "sh -c 'pnpm -r --parallel --filter @deck/core --filter @deck/rn dev & pnpm --filter deck-mobile exec expo start -c'",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",

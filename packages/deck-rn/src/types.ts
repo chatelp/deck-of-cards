@@ -26,6 +26,8 @@ export interface CardViewProps {
   isSelected: boolean;
   style?: StyleProp<ViewStyle>;
   driver?: AnimationDriver;
+  cardDimensions?: { width: number; height: number };
+  debugLogs?: boolean;
   onFlip?: () => void | Promise<void>;
   onSelect?: () => void | Promise<void>;
   renderFace: (props: CardRenderProps) => ReactNode;
@@ -60,4 +62,9 @@ export interface DeckViewProps {
   autoFan?: boolean;
   style?: StyleProp<ViewStyle>;
   onDeckReady?: (actions: DeckViewActions) => void;
+  cardDimensions?: { width: number; height: number };
+  scaleLimits?: { minScale: number; maxScale: number };
+  debugLogs?: boolean;
+  containerSize?: { width: number; height: number };
+  containerPadding?: number; // padding applied by parent container (symmetric), used to center and scale inside content area
 }

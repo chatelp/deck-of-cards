@@ -16,25 +16,36 @@ export const CardView: React.FC<CardViewProps> = ({
   renderFace,
   renderBack,
   style,
-  driver
+  driver,
+  cardDimensions,
+  debugLogs
 }) => {
+  const cardWidth = cardDimensions?.width ?? CARD_WIDTH;
+  const cardHeight = cardDimensions?.height ?? CARD_HEIGHT;
+
   const rotation = useSharedValue(layout.rotation);
-  const translateX = useSharedValue(layout.x - CARD_WIDTH / 2);
-  const translateY = useSharedValue(layout.y - CARD_HEIGHT / 2);
+  const translateX = useSharedValue(layout.x - cardWidth / 2);
+  const translateY = useSharedValue(layout.y - cardHeight / 2);
   const scale = useSharedValue(layout.scale);
   const rotateY = useSharedValue(state.faceUp ? 180 : 0);
   const zIndex = useSharedValue(layout.zIndex);
+
+  const log = (label: string, payload?: unknown) => {
+    if (!__DEV__ || !debugLogs) return;
+    try { console.log(`[CardView ${state.id}] ${label}`, payload ?? ''); } catch {}
+  };
 
   useEffect(() => {
     if (driver instanceof ReanimatedDriver) {
       return;
     }
     rotation.value = withTiming(layout.rotation, { duration: 250 });
-    translateX.value = withTiming(layout.x - CARD_WIDTH / 2, { duration: 250 });
-    translateY.value = withTiming(layout.y - CARD_HEIGHT / 2, { duration: 250 });
+    translateX.value = withTiming(layout.x - cardWidth / 2, { duration: 250 });
+    translateY.value = withTiming(layout.y - cardHeight / 2, { duration: 250 });
     scale.value = withTiming(layout.scale, { duration: 250 });
     zIndex.value = layout.zIndex;
-  }, [layout, rotation, translateX, translateY, scale, zIndex, driver]);
+    log('layoutUpdate', { layout, cardWidth, cardHeight });
+  }, [layout, rotation, translateX, translateY, scale, zIndex, driver, cardWidth, cardHeight]);
 
   useEffect(() => {
     if (driver instanceof ReanimatedDriver) {
@@ -52,8 +63,8 @@ export const CardView: React.FC<CardViewProps> = ({
         scale,
         rotateY,
         zIndex,
-        offsetX: CARD_WIDTH / 2,
-        offsetY: CARD_HEIGHT / 2
+        offsetX: cardWidth / 2,
+        offsetY: cardHeight / 2
       }, state.faceUp);
       return () => {
         driver.unregister(state.id);
@@ -80,6 +91,7 @@ export const CardView: React.FC<CardViewProps> = ({
 
   const handlePressIn = useCallback(() => {
     invokeAsync(onFlip);
+    log('pressIn');
   }, [invokeAsync, onFlip]);
 
   const handlePressOut = useCallback(() => {
@@ -87,6 +99,7 @@ export const CardView: React.FC<CardViewProps> = ({
       return;
     }
     invokeAsync(onSelect);
+    log('pressOut -> select');
   }, [invokeAsync, onSelect, isSelected]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -106,16 +119,14 @@ export const CardView: React.FC<CardViewProps> = ({
 
   return (
     <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.pressable}>
-      <Animated.View style={[styles.card, animatedStyle, isSelected && styles.selected, style]}>{content}</Animated.View>
+      <Animated.View style={[styles.card, { width: cardWidth, height: cardHeight }, animatedStyle, isSelected && styles.selected, style]}>{content}</Animated.View>
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   pressable: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%'
+    position: 'absolute'
   },
   card: {
     width: CARD_WIDTH,

@@ -12,6 +12,7 @@ import {
 } from '@deck/core';
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { ReanimatedDriver } from './drivers/ReanimatedDriver';
+import { RN_DECK_VERSION } from './version';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 
 export const DeckView: React.FC<DeckViewProps> = ({
@@ -29,9 +30,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
   ringRadius,
   autoFan = false,
   style,
-  onDeckReady
+  onDeckReady,
+  cardDimensions,
+  scaleLimits,
+  debugLogs,
+  containerSize: containerSizeProp,
+  containerPadding: containerPaddingProp
 }) => {
-  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [internalContainerSize, setInternalContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const animationDriver: AnimationDriver = useMemo(
     () => driver ?? new ReanimatedDriver(),
     [driver]
@@ -41,6 +47,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
 
   const lastFannedLengthRef = useRef<number | null>(null);
+
+  // Sanity log to ensure the correct build of @deck/rn is loaded by Metro/Expo
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[DeckView] sanity: version=%s debug=%s', RN_DECK_VERSION, !!debugLogs);
+    // eslint-disable-next-line no-console
+    console.log('[DeckView] props cardDimensions=%o scaleLimits=%o', cardDimensions, scaleLimits);
+  }, []);
   useEffect(() => {
     if (!autoFan) {
       return;
@@ -77,30 +91,61 @@ export const DeckView: React.FC<DeckViewProps> = ({
     onDeckStateChange?.(deck);
   }, [deck, onDeckStateChange]);
 
+  const cardWidth = cardDimensions?.width ?? CARD_WIDTH;
+  const cardHeight = cardDimensions?.height ?? CARD_HEIGHT;
+
+  const sizeScaleX = cardWidth / CARD_WIDTH;
+  const sizeScaleY = cardHeight / CARD_HEIGHT;
+
+  const adjustedPositions = useMemo(() => {
+    const result: Record<string, CardLayout> = {};
+    deck.cards.forEach((card) => {
+      const position = deck.positions[card.id];
+      if (!position) {
+        return;
+      }
+      result[card.id] = {
+        ...position,
+        x: position.x * sizeScaleX,
+        y: position.y * sizeScaleY
+      };
+    });
+    return result;
+  }, [deck.cards, deck.positions, sizeScaleX, sizeScaleY]);
+
   const deckBounds = useMemo(
     () =>
-      calculateDeckBounds(deck.cards, deck.positions, {
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT
+      calculateDeckBounds(deck.cards, adjustedPositions, {
+        width: cardWidth,
+        height: cardHeight
       }),
-    [deck.cards, deck.positions]
+    [deck.cards, adjustedPositions, cardWidth, cardHeight]
   );
+
+  useEffect(() => {
+    if (!__DEV__ || !debugLogs) return;
+    // eslint-disable-next-line no-console
+    console.log('[DeckView] bounds', { w: deckBounds.width, h: deckBounds.height, cx: deckBounds.centerX, cy: deckBounds.centerY });
+  }, [deckBounds, debugLogs]);
 
   const layoutPadding = useMemo(() => {
     switch (deck.layoutMode) {
       case 'ring':
-        return CARD_HEIGHT * 0.38;
+        return cardHeight * 0.35;
       case 'fan':
-        return CARD_HEIGHT * 0.28;
+        return cardHeight * 0.28;
       case 'stack':
-        return CARD_HEIGHT * 0.2;
+        return cardHeight * 0.15;
       default:
-        return CARD_HEIGHT * 0.24;
+        return cardHeight * 0.2;
     }
-  }, [deck.layoutMode]);
+  }, [deck.layoutMode, cardHeight]);
+
+  const effectiveContainerSize = containerSizeProp ?? internalContainerSize;
 
   const deckTransform = useMemo(() => {
-    const { width: availableWidth, height: availableHeight } = containerSize;
+    const { width: availableWidth, height: availableHeight } = effectiveContainerSize;
+    const containerPadding = containerPaddingProp ?? 0;
     if (
       deckBounds.width === 0 ||
       deckBounds.height === 0 ||
@@ -111,54 +156,98 @@ export const DeckView: React.FC<DeckViewProps> = ({
         scale: 1,
         translateToOriginX: 0,
         translateToOriginY: 0,
-        translateToCenterX: availableWidth / 2,
-        translateToCenterY: availableHeight / 2
-      };
+        translateToCenterX: 0,
+        translateToCenterY: 0,
+        innerWidth: 0,
+        innerHeight: 0,
+        containerPadding
+      } as const;
     }
 
     const paddedWidth = deckBounds.width + layoutPadding * 2;
     const paddedHeight = deckBounds.height + layoutPadding * 2;
-    const scaleX = availableWidth / paddedWidth;
-    const scaleY = availableHeight / paddedHeight;
+    const innerWidth = Math.max(0, availableWidth - containerPadding * 2);
+    const innerHeight = Math.max(0, availableHeight - containerPadding * 2);
+    const scaleX = innerWidth / paddedWidth;
+    const scaleY = innerHeight / paddedHeight;
     let scale = Math.min(scaleX, scaleY, 1);
-    if (deck.layoutMode === 'ring') {
-      scale *= 0.92;
-    } else if (deck.layoutMode === 'fan') {
-      scale *= 0.96;
+    const minScale = scaleLimits?.minScale ?? 0;
+    const maxScale = scaleLimits?.maxScale ?? 1;
+    scale = Math.max(minScale, Math.min(scale, maxScale));
+
+    if (__DEV__ && debugLogs) {
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] container', { availableWidth, availableHeight, layoutPadding });
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] padded', { paddedWidth, paddedHeight, scaleX, scaleY, scale });
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] layout', { mode: deck.layoutMode, cardWidth, cardHeight, ringRadius });
     }
 
+    const resolvedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
     return {
-      scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+      scale: resolvedScale,
       translateToOriginX: -deckBounds.centerX,
       translateToOriginY: -deckBounds.centerY,
-      translateToCenterX: availableWidth / 2,
-      translateToCenterY: availableHeight / 2
-    };
-  }, [deckBounds, containerSize, layoutPadding, deck.layoutMode]);
+      // Center within the inner content area offset by container padding
+      translateToCenterX: containerPadding + innerWidth / 2,
+      translateToCenterY: containerPadding + innerHeight / 2,
+      innerWidth,
+      innerHeight,
+      containerPadding
+    } as const;
+  }, [deckBounds, effectiveContainerSize, layoutPadding, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius, containerPaddingProp]);
 
   const deckTransformStyle = useMemo<ViewStyle>(() => {
     const transforms: NonNullable<ViewStyle['transform']> = [];
+    // move the deck's computed bounds center to the origin of the content wrapper
     if (deckTransform.translateToOriginX !== 0 || deckTransform.translateToOriginY !== 0) {
       transforms.push({ translateX: deckTransform.translateToOriginX });
       transforms.push({ translateY: deckTransform.translateToOriginY });
     }
+    // scale around the content wrapper's own center (RN scales about view center)
     if (deckTransform.scale !== 1) {
       transforms.push({ scale: deckTransform.scale });
     }
+    // finally translate to the visual center of the inner content area
     transforms.push({ translateX: deckTransform.translateToCenterX });
     transforms.push({ translateY: deckTransform.translateToCenterY });
+    if (__DEV__ && debugLogs) {
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] transform', {
+        centerX: deckTransform.translateToCenterX,
+        centerY: deckTransform.translateToCenterY,
+        translateToOriginX: deckTransform.translateToOriginX,
+        translateToOriginY: deckTransform.translateToOriginY,
+        scale: deckTransform.scale,
+        containerPadding: deckTransform.containerPadding,
+        innerWidth: deckTransform.innerWidth,
+        innerHeight: deckTransform.innerHeight
+      });
+    }
     return { transform: transforms };
-  }, [deckTransform]);
+  }, [deckTransform, debugLogs]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    if (containerSizeProp) {
+      if (__DEV__ && debugLogs) {
+        const { width, height } = event.nativeEvent.layout;
+        console.log('[DeckView] onLayout (ignored, external size provided)', { width, height, external: containerSizeProp });
+      }
+      return;
+    }
     const { width, height } = event.nativeEvent.layout;
-    setContainerSize((prev) => {
+    setInternalContainerSize((prev) => {
       if (prev.width === width && prev.height === height) {
         return prev;
       }
       return { width, height };
     });
-  }, []);
+    if (__DEV__ && debugLogs) {
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] onLayout', { width, height });
+    }
+  }, [debugLogs, containerSizeProp]);
 
   useEffect(() => {
     deck.cards.forEach((card) => {
@@ -202,16 +291,29 @@ export const DeckView: React.FC<DeckViewProps> = ({
   );
   const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
+  const handleCanvasLayout = useCallback((event: LayoutChangeEvent) => {
+    if (__DEV__ && debugLogs) {
+      const { width, height } = event.nativeEvent.layout;
+      // eslint-disable-next-line no-console
+      console.log('[DeckView] canvas', { width, height });
+    }
+  }, [debugLogs]);
+
+  const layoutPositions = adjustedPositions;
+
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
-      <View style={[styles.deckCanvas, deckTransformStyle]}>
-        {deck.cards.map((card) => (
+      {/* Fill canvas so parent-level transforms operate on a non-zero-sized view */}
+      <View style={styles.deckCanvas} onLayout={handleCanvasLayout}>
+        <View style={deckTransformStyle}>
+          {deck.cards.map((card) => (
           <CardView
             key={card.id}
             state={card}
-            layout={layout[card.id] as CardLayout}
+            layout={layoutPositions[card.id] as CardLayout}
             isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
             driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
+            cardDimensions={{ width: cardWidth, height: cardHeight }}
             onFlip={async () => {
               await flip(card.id);
               onFlipCard?.(card.id, !card.faceUp);
@@ -225,8 +327,10 @@ export const DeckView: React.FC<DeckViewProps> = ({
             }}
             renderFace={renderCardFace}
             renderBack={effectiveRenderBack}
+            debugLogs={debugLogs}
           />
-        ))}
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -234,7 +338,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1
+    width: '100%',
+    height: '100%'
   },
   deckCanvas: {
     ...StyleSheet.absoluteFillObject
@@ -334,3 +439,4 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
     </View>
   );
 };
+ 

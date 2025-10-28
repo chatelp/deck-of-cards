@@ -10,8 +10,9 @@ import {
   useWindowDimensions
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { DeckView, DeckViewActions, CARD_HEIGHT } from '@deck/rn';
+import { DeckView, DeckViewActions } from '@deck/rn';
 import { CardData, CardState, DeckState } from '@deck/core';
+import { getDeckLayoutMetrics, LayoutMode } from './layoutMetrics';
 
 const CARD_BACK_LIGHT = require('../assets/cards/card-back-light.png');
 const CARD_BACK_DARK = require('../assets/cards/card-back-dark.png');
@@ -22,8 +23,6 @@ const CARD_BACK_OPTIONS = [
 ] as const;
 
 type CardBackOptionId = (typeof CARD_BACK_OPTIONS)[number]['id'];
-type LayoutMode = 'fan' | 'ring' | 'stack';
-
 interface YiJingCard extends CardData {
   hexagram: string;
   meaning: string;
@@ -254,51 +253,14 @@ export default function App() {
   const remainingCount = cards.length - drawnCards.length;
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selectedCardId) ?? null;
-  const layoutMetrics = useMemo(() => {
-    const safeWidth = Math.max(320, viewportWidth - 32);
-    if (actualLayout === 'ring') {
-      const maxWidth = Math.min(safeWidth, 420);
-      const padding = Math.max(12, maxWidth * 0.04);
-      const availableRadius = (maxWidth - padding * 2) / 2;
-      const radius = Math.max(80, availableRadius - CARD_HEIGHT / 2);
-      return {
-        style: {
-          width: '100%',
-          maxWidth,
-          aspectRatio: 1,
-          padding
-        } as const,
-        ringRadius: radius
-      };
-    }
-    if (actualLayout === 'stack') {
-      const maxWidth = Math.min(safeWidth, 380);
-      const padding = Math.max(10, maxWidth * 0.035);
-      return {
-        style: {
-          width: '100%',
-          maxWidth,
-          aspectRatio: 3 / 4,
-          padding
-        } as const,
-        ringRadius: undefined
-      };
-    }
-    const maxWidth = Math.min(safeWidth, 640);
-    const padding = Math.max(14, maxWidth * 0.035);
-    return {
-      style: {
-        width: '100%',
-        maxWidth,
-        aspectRatio: 4 / 3,
-        padding
-      } as const,
-      ringRadius: undefined
-    };
-  }, [actualLayout, viewportWidth]);
+  const layoutMetrics = useMemo(() => getDeckLayoutMetrics(viewportWidth, actualLayout), [viewportWidth, actualLayout]);
+  const [deckViewportSize, setDeckViewportSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[App] metrics', { viewportWidth, actualLayout, layoutMetrics });
+  }, [viewportWidth, actualLayout, layoutMetrics]);
 
-  const deckContainerStyle = useMemo(() => [styles.deckContainer, layoutMetrics.style], [layoutMetrics]);
-  const ringRadius = layoutMetrics.ringRadius;
+  const deckContainerStyle = useMemo(() => [styles.deckContainer, layoutMetrics.containerStyle], [layoutMetrics]);
   const deckKey = useMemo(() => `${deckSize}-${cardsSeed}-${cardBackOption}`, [deckSize, cardsSeed, cardBackOption]);
 
   const applyLayout = useCallback(
@@ -310,12 +272,12 @@ export default function App() {
       if (mode === 'fan') {
         await actions.fan();
       } else if (mode === 'ring') {
-        await actions.ring({ radius: ringRadius });
+        await actions.ring({ radius: layoutMetrics.ringRadius });
       } else {
         await actions.resetStack();
       }
     },
-    [ringRadius]
+    [layoutMetrics.ringRadius]
   );
 
   const handleShuffle = useCallback(async () => {
@@ -410,10 +372,10 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (actualLayout === 'ring' && ringRadius) {
-      void deckActions.current?.ring({ radius: ringRadius });
+    if (actualLayout === 'ring' && layoutMetrics.ringRadius) {
+      void deckActions.current?.ring({ radius: layoutMetrics.ringRadius });
     }
-  }, [actualLayout, ringRadius]);
+  }, [actualLayout, layoutMetrics.ringRadius]);
 
   useEffect(() => {
     if (deckActions.current == null) {
@@ -451,14 +413,27 @@ export default function App() {
           </View>
 
           <View style={styles.deckSection}>
-            <View style={deckContainerStyle}>
+            <View
+              style={deckContainerStyle}
+              onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                // eslint-disable-next-line no-console
+                console.log('[App] deckContainer', { width, height });
+                setDeckViewportSize({ width, height });
+              }}
+            >
               <DeckView
                 key={deckKey}
                 cards={cards}
                 autoFan
                 drawLimit={drawLimit}
-                ringRadius={ringRadius}
+                ringRadius={layoutMetrics.ringRadius}
                 defaultBackAsset={defaultBackAsset}
+                containerPadding={layoutMetrics.containerStyle.padding}
+                cardDimensions={{ width: layoutMetrics.cardWidth, height: layoutMetrics.cardHeight }}
+                scaleLimits={layoutMetrics.scaleLimits}
+                containerSize={deckViewportSize.width > 0 && deckViewportSize.height > 0 ? deckViewportSize : undefined}
+                debugLogs
                 onDeckReady={(actions) => {
                   deckActions.current = actions;
                 }}
@@ -706,8 +681,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: CARD_HEIGHT * 1.35
+    justifyContent: 'center'
   },
   statsSection: {
     flexDirection: 'row',
