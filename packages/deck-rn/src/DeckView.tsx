@@ -102,8 +102,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const cardWidth = cardDimensions?.width ?? CARD_WIDTH;
   const cardHeight = cardDimensions?.height ?? CARD_HEIGHT;
 
-  const sizeScaleX = cardWidth / CARD_WIDTH;
-  const sizeScaleY = cardHeight / CARD_HEIGHT;
+  const sizeScaleXBase = cardWidth / CARD_WIDTH;
+  const sizeScaleYBase = cardHeight / CARD_HEIGHT;
 
   const adjustedPositions = useMemo(() => {
     const result: Record<string, CardLayout> = {};
@@ -114,14 +114,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
       }
       result[card.id] = {
         ...position,
-        x: position.x * sizeScaleX,
-        y: position.y * sizeScaleY
+        x: position.x * sizeScaleXBase,
+        y: position.y * sizeScaleYBase
       };
     });
     return result;
-  }, [deck.cards, deck.positions, sizeScaleX, sizeScaleY]);
+  }, [deck.cards, deck.positions, sizeScaleXBase, sizeScaleYBase]);
 
-  const deckBounds = useMemo(
+  const deckBoundsBase = useMemo(
     () =>
       calculateDeckBounds(deck.cards, adjustedPositions, {
         width: cardWidth,
@@ -133,11 +133,12 @@ export const DeckView: React.FC<DeckViewProps> = ({
   useEffect(() => {
     if (!__DEV__ || !debugLogs) return;
     // eslint-disable-next-line no-console
-    console.log('[DeckView] bounds', { w: deckBounds.width, h: deckBounds.height, cx: deckBounds.centerX, cy: deckBounds.centerY });
-  }, [deckBounds, debugLogs]);
+    console.log('[DeckView] bounds', { w: deckBoundsBase.width, h: deckBoundsBase.height, cx: deckBoundsBase.centerX, cy: deckBoundsBase.centerY });
+  }, [deckBoundsBase, debugLogs]);
 
   const effectiveContainerSize = containerSizeProp ?? internalContainerSize;
 
+  // Compute fit scale using the unscaled bounds
   const deckTransform = useMemo(() => {
     const { width: availableWidth, height: availableHeight } = effectiveContainerSize;
     const minDimension = Math.max(0, Math.min(availableWidth, availableHeight));
@@ -161,8 +162,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
       } as const;
     }
 
-    const paddedWidth = deckBounds.width + layoutPadding * 2;
-    const paddedHeight = deckBounds.height + layoutPadding * 2;
+    const paddedWidth = deckBoundsBase.width + layoutPadding * 2;
+    const paddedHeight = deckBoundsBase.height + layoutPadding * 2;
     const innerWidth = Math.max(0, availableWidth);
     const innerHeight = Math.max(0, availableHeight);
     const scaleX = innerWidth / paddedWidth;
@@ -184,26 +185,24 @@ export const DeckView: React.FC<DeckViewProps> = ({
     const resolvedScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
     return {
       scale: resolvedScale,
-      translateToOriginX: -deckBounds.centerX,
-      translateToOriginY: -deckBounds.centerY,
+      translateToOriginX: -deckBoundsBase.centerX,
+      translateToOriginY: -deckBoundsBase.centerY,
       anchorLeft: innerWidth / 2,
       anchorTop: innerHeight / 2,
       innerWidth,
       innerHeight,
       layoutPadding
     } as const;
-  }, [deckBounds, effectiveContainerSize, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius]);
+  }, [deckBoundsBase, effectiveContainerSize, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius]);
 
+  // Apply only the translate-to-origin at parent level. We bake the fit scale into cardDimensions
+  // and position scaling so centering is not affected by parent transforms.
   const deckContentTransformStyle = useMemo<ViewStyle>(() => {
     const transforms: NonNullable<ViewStyle['transform']> = [];
     // move the deck's computed bounds center to the origin of the content wrapper
     if (deckTransform.translateToOriginX !== 0 || deckTransform.translateToOriginY !== 0) {
       transforms.push({ translateX: deckTransform.translateToOriginX });
       transforms.push({ translateY: deckTransform.translateToOriginY });
-    }
-    // scale around the content wrapper's own center (RN scales about view center)
-    if (deckTransform.scale !== 1) {
-      transforms.push({ scale: deckTransform.scale });
     }
     if (__DEV__ && debugLogs) {
       // eslint-disable-next-line no-console
@@ -212,7 +211,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
         anchorTop: deckTransform.anchorTop,
         translateToOriginX: deckTransform.translateToOriginX,
         translateToOriginY: deckTransform.translateToOriginY,
-        scale: deckTransform.scale,
+        scaleBaked: deckTransform.scale,
         layoutPadding: deckTransform.layoutPadding,
         innerWidth: deckTransform.innerWidth,
         innerHeight: deckTransform.innerHeight
@@ -301,17 +300,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
         <View style={[styles.centerAnchor, { left: deckTransform.anchorLeft, top: deckTransform.anchorTop }]}>
           <View style={deckContentTransformStyle}>
             {deck.cards.map((card) => (
-            <CardView
-              key={card.id}
-              state={card}
-              layout={layoutPositions[card.id] as CardLayout}
-              isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-              driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
-              cardDimensions={{ width: cardWidth, height: cardHeight }}
-              onFlip={async () => {
-                await flip(card.id);
-                onFlipCard?.(card.id, !card.faceUp);
-              }}
+              <CardView
+                key={card.id}
+                state={card}
+                layout={layoutPositions[card.id] as CardLayout}
+                isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+                driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
+                cardDimensions={{ width: cardWidth * deckTransform.scale, height: cardHeight * deckTransform.scale }}
+                onFlip={async () => {
+                  await flip(card.id);
+                  onFlipCard?.(card.id, !card.faceUp);
+                }}
               onSelect={async () => {
                 const drawn = await drawCard(card.id);
                 if (drawn) {

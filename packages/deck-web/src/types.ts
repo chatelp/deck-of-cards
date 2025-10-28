@@ -6,6 +6,7 @@ import {
   CardState,
   CardTransform,
   DeckState,
+  FanOptions,
   RingOptions,
   ShuffleOptions
 } from '@deck/core';
@@ -31,7 +32,7 @@ export interface CardViewProps {
 }
 
 export interface DeckViewActions {
-  fan: () => Promise<void>;
+  fan: (options?: FanOptions) => Promise<void>;
   ring: (options?: RingOptions) => Promise<void>;
   shuffle: (options?: ShuffleOptions) => Promise<void>;
   flip: (cardId: string) => Promise<void>;

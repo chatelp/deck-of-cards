@@ -7,14 +7,15 @@ import {
   DeckState,
   RingOptions,
   FlipOptions,
-  ShuffleOptions
+  ShuffleOptions,
+  FanOptions
 } from './models';
 import { computeFanLayout, computeRingLayout, computeStackLayout } from './layout';
 import { setDeckLayoutMode, setDeckPositions, updateCardState, updateCardLayout } from './state';
 import { shuffleArray } from './shuffle';
 
-export function fan(deck: DeckState): { deck: DeckState; sequence: AnimationSequence } {
-  const layouts = computeFanLayout(deck);
+export function fan(deck: DeckState, options: FanOptions = {}): { deck: DeckState; sequence: AnimationSequence } {
+  const layouts = computeFanLayout(deck, options);
   const sequence: AnimationSequence = {
     steps: Object.entries(layouts).map(([cardId, target], index) => ({
       cardId,

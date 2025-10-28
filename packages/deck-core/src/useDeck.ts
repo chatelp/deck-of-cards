@@ -9,6 +9,7 @@ import {
   DeckState,
   DeckStateConfig,
   RingOptions,
+  FanOptions,
   ShuffleOptions
 } from './models';
 import { DeckObservable } from './observable';
@@ -85,8 +86,8 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     [driver]
   );
 
-  const fanOut = useCallback(async () => {
-    const { deck: nextDeck, sequence } = fan(deck);
+  const fanOut = useCallback(async (options?: FanOptions) => {
+    const { deck: nextDeck, sequence } = fan(deck, options);
     await applySequence(nextDeck, sequence);
     observable.emit({ type: 'fan', payload: { layouts: nextDeck.positions } });
   }, [deck, applySequence]);
