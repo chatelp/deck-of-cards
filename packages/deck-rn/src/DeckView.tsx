@@ -153,8 +153,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
         scale: 1,
         translateToOriginX: 0,
         translateToOriginY: 0,
-        translateToCenterX: 0,
-        translateToCenterY: 0,
+        anchorLeft: 0,
+        anchorTop: 0,
         innerWidth: 0,
         innerHeight: 0,
         layoutPadding
@@ -186,16 +186,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
       scale: resolvedScale,
       translateToOriginX: -deckBounds.centerX,
       translateToOriginY: -deckBounds.centerY,
-      // Center within the available content area
-      translateToCenterX: innerWidth / 2,
-      translateToCenterY: innerHeight / 2,
+      anchorLeft: innerWidth / 2,
+      anchorTop: innerHeight / 2,
       innerWidth,
       innerHeight,
       layoutPadding
     } as const;
   }, [deckBounds, effectiveContainerSize, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius]);
 
-  const deckTransformStyle = useMemo<ViewStyle>(() => {
+  const deckContentTransformStyle = useMemo<ViewStyle>(() => {
     const transforms: NonNullable<ViewStyle['transform']> = [];
     // move the deck's computed bounds center to the origin of the content wrapper
     if (deckTransform.translateToOriginX !== 0 || deckTransform.translateToOriginY !== 0) {
@@ -206,14 +205,11 @@ export const DeckView: React.FC<DeckViewProps> = ({
     if (deckTransform.scale !== 1) {
       transforms.push({ scale: deckTransform.scale });
     }
-    // finally translate to the visual center of the inner content area
-    transforms.push({ translateX: deckTransform.translateToCenterX });
-    transforms.push({ translateY: deckTransform.translateToCenterY });
     if (__DEV__ && debugLogs) {
       // eslint-disable-next-line no-console
       console.log('[DeckView] transform', {
-        centerX: deckTransform.translateToCenterX,
-        centerY: deckTransform.translateToCenterY,
+        anchorLeft: deckTransform.anchorLeft,
+        anchorTop: deckTransform.anchorTop,
         translateToOriginX: deckTransform.translateToOriginX,
         translateToOriginY: deckTransform.translateToOriginY,
         scale: deckTransform.scale,
@@ -300,33 +296,35 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   return (
     <View style={[styles.container, style]} onLayout={handleLayout}>
-      {/* Fill canvas so parent-level transforms operate on a non-zero-sized view */}
+      {/* Fill canvas; anchor places content center exactly at container center (not scaled) */}
       <View style={styles.deckCanvas} onLayout={handleCanvasLayout}>
-        <View style={deckTransformStyle}>
-          {deck.cards.map((card) => (
-          <CardView
-            key={card.id}
-            state={card}
-            layout={layoutPositions[card.id] as CardLayout}
-            isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-            driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
-            cardDimensions={{ width: cardWidth, height: cardHeight }}
-            onFlip={async () => {
-              await flip(card.id);
-              onFlipCard?.(card.id, !card.faceUp);
-            }}
-            onSelect={async () => {
-              const drawn = await drawCard(card.id);
-              if (drawn) {
-                onSelectCard?.(card.id, true);
-                onDrawCard?.(drawn as CardState);
-              }
-            }}
-            renderFace={renderCardFace}
-            renderBack={effectiveRenderBack}
-            debugLogs={debugLogs}
-          />
-          ))}
+        <View style={[styles.centerAnchor, { left: deckTransform.anchorLeft, top: deckTransform.anchorTop }]}>
+          <View style={deckContentTransformStyle}>
+            {deck.cards.map((card) => (
+            <CardView
+              key={card.id}
+              state={card}
+              layout={layoutPositions[card.id] as CardLayout}
+              isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+              driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
+              cardDimensions={{ width: cardWidth, height: cardHeight }}
+              onFlip={async () => {
+                await flip(card.id);
+                onFlipCard?.(card.id, !card.faceUp);
+              }}
+              onSelect={async () => {
+                const drawn = await drawCard(card.id);
+                if (drawn) {
+                  onSelectCard?.(card.id, true);
+                  onDrawCard?.(drawn as CardState);
+                }
+              }}
+              renderFace={renderCardFace}
+              renderBack={effectiveRenderBack}
+              debugLogs={debugLogs}
+            />
+            ))}
+          </View>
         </View>
       </View>
     </View>
@@ -340,6 +338,9 @@ const styles = StyleSheet.create({
   },
   deckCanvas: {
     ...StyleSheet.absoluteFillObject
+  },
+  centerAnchor: {
+    position: 'absolute'
   },
   cardBackWrapper: {
     flex: 1,
