@@ -66,5 +66,8 @@ export interface DeckViewProps {
   scaleLimits?: { minScale: number; maxScale: number };
   debugLogs?: boolean;
   containerSize?: { width: number; height: number };
-  containerPadding?: number; // padding applied by parent container (symmetric), used to center and scale inside content area
+  fanConfig?: {
+    radius?: number;
+    spreadAngle?: number;
+  };
 }

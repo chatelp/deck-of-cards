@@ -13,6 +13,11 @@ export interface DeckLayoutMetrics {
     minHeight: number;
   };
   ringRadius?: number;
+  fanConfig?: {
+    radius: number;
+    spreadAngle: number;
+    originY: number;
+  };
   scaleLimits: {
     minScale: number;
     maxScale: number;
@@ -21,42 +26,63 @@ export interface DeckLayoutMetrics {
 
 const CARD_ASPECT = CARD_WIDTH / CARD_HEIGHT;
 
-export function getResponsiveCardSize(availableWidth: number, layout: LayoutMode): {
+export function getResponsiveCardSize(availableWidth: number, layout: LayoutMode, availableHeight?: number): {
   width: number;
   height: number;
 } {
-  const maxCardWidth = Math.min(availableWidth * 0.35, 180);
-  const minCardWidth = 120;
-  let width = Math.max(minCardWidth, maxCardWidth);
-  if (layout === 'stack') {
-    width *= 0.9;
-  }
+  const ratio = layout === 'stack' ? 0.78 : layout === 'fan' ? 0.58 : 0.52;
+  const hardCap = layout === 'stack' ? 260 : 220;
+  const minWidth = 96;
+  const widthLimit = Math.min(availableWidth * ratio, availableWidth - 16, hardCap);
+  const heightLimit = availableHeight ? availableHeight * (layout === 'stack' ? 0.92 : 0.78) : Number.POSITIVE_INFINITY;
+  const widthFromHeight = Number.isFinite(heightLimit) ? heightLimit * CARD_ASPECT : Number.POSITIVE_INFINITY;
+  const width = Math.max(minWidth, Math.min(widthLimit, widthFromHeight));
   return {
     width,
     height: width / CARD_ASPECT
   };
 }
 
-export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode): DeckLayoutMetrics {
+export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode, containerSize?: { width: number; height: number }): DeckLayoutMetrics {
   const safeWidth = Math.max(320, viewportWidth - 32);
-  const cardSize = getResponsiveCardSize(safeWidth, layout);
+
+  const baseMaxWidth = layout === 'ring'
+    ? Math.min(safeWidth, 420)
+    : layout === 'stack'
+      ? Math.min(safeWidth, 380)
+      : Math.min(safeWidth, 640);
+  const basePadding = layout === 'ring'
+    ? Math.max(12, baseMaxWidth * 0.04)
+    : layout === 'stack'
+      ? Math.max(10, baseMaxWidth * 0.035)
+      : Math.max(14, baseMaxWidth * 0.035);
+  const aspectRatio = layout === 'ring' ? 1 : layout === 'stack' ? 3 / 4 : 4 / 3;
+
+  const measuredWidth = containerSize?.width && containerSize.width > 0 ? Math.min(containerSize.width, baseMaxWidth) : baseMaxWidth;
+  const measuredHeight = containerSize?.height && containerSize.height > 0
+    ? containerSize.height
+    : Math.max(baseMaxWidth / aspectRatio, baseMaxWidth * 0.7);
+
+  const innerWidth = Math.max(120, measuredWidth - basePadding * 2);
+  const innerHeight = Math.max(160, measuredHeight - basePadding * 2);
+
+  const cardSize = getResponsiveCardSize(innerWidth, layout, innerHeight);
+
+  const containerStyle = {
+    width: '100%' as const,
+    maxWidth: measuredWidth,
+    aspectRatio,
+    padding: basePadding,
+    minHeight: Math.max(measuredHeight, cardSize.height * 1.3)
+  };
 
   if (layout === 'ring') {
-    const maxWidth = Math.min(safeWidth, 420);
-    const padding = Math.max(12, maxWidth * 0.04);
-    const availableRadius = (maxWidth - padding * 2) / 2;
     const cardDiagonal = Math.sqrt(cardSize.width ** 2 + cardSize.height ** 2);
-    const ringRadius = Math.max(40, availableRadius - cardDiagonal / 2);
+    const ringRadius = Math.max(36, (Math.min(innerWidth, innerHeight) - cardDiagonal) / 2);
     return {
       cardWidth: cardSize.width,
       cardHeight: cardSize.height,
-      containerStyle: {
-        width: '100%',
-        maxWidth,
-        aspectRatio: 1,
-        padding,
-        minHeight: cardSize.height * 1.4
-      },
+      containerStyle,
       ringRadius,
       scaleLimits: {
         minScale: 0,
@@ -65,18 +91,20 @@ export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode):
     };
   }
 
-  if (layout === 'stack') {
-    const maxWidth = Math.min(safeWidth, 380);
-    const padding = Math.max(10, maxWidth * 0.035);
+  if (layout === 'fan') {
+    const maxRadiusByWidth = innerWidth / 2;
+    const maxRadiusByHeight = innerHeight * 0.95;
+    const fanRadius = Math.max(cardSize.height * 1.1, Math.min(maxRadiusByWidth, maxRadiusByHeight));
+    const spreadAngle = Math.PI * 0.95;
+    const originY = cardSize.height * 0.45;
     return {
       cardWidth: cardSize.width,
       cardHeight: cardSize.height,
-      containerStyle: {
-        width: '100%',
-        maxWidth,
-        aspectRatio: 3 / 4,
-        padding,
-        minHeight: cardSize.height * 1.4
+      containerStyle,
+      fanConfig: {
+        radius: fanRadius,
+        spreadAngle,
+        originY
       },
       scaleLimits: {
         minScale: 0,
@@ -85,18 +113,10 @@ export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode):
     };
   }
 
-  const maxWidth = Math.min(safeWidth, 640);
-  const padding = Math.max(14, maxWidth * 0.035);
   return {
-      cardWidth: cardSize.width,
-      cardHeight: cardSize.height,
-      containerStyle: {
-        width: '100%',
-        maxWidth,
-        aspectRatio: 4 / 3,
-        padding,
-        minHeight: cardSize.height * 1.35
-      },
+    cardWidth: cardSize.width,
+    cardHeight: cardSize.height,
+    containerStyle,
     scaleLimits: {
       minScale: 0,
       maxScale: 1

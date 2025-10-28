@@ -253,14 +253,25 @@ export default function App() {
   const remainingCount = cards.length - drawnCards.length;
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selectedCardId) ?? null;
-  const layoutMetrics = useMemo(() => getDeckLayoutMetrics(viewportWidth, actualLayout), [viewportWidth, actualLayout]);
-  const [deckViewportSize, setDeckViewportSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [deckContainerSize, setDeckContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const layoutMetrics = useMemo(
+    () => getDeckLayoutMetrics(viewportWidth, actualLayout, deckContainerSize),
+    [viewportWidth, actualLayout, deckContainerSize]
+  );
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.log('[App] metrics', { viewportWidth, actualLayout, layoutMetrics });
   }, [viewportWidth, actualLayout, layoutMetrics]);
 
   const deckContainerStyle = useMemo(() => [styles.deckContainer, layoutMetrics.containerStyle], [layoutMetrics]);
+
+  const deckViewportSize = useMemo(() => {
+    const padding = layoutMetrics.containerStyle.padding ?? 0;
+    return {
+      width: Math.max(0, deckContainerSize.width - padding * 2),
+      height: Math.max(0, deckContainerSize.height - padding * 2)
+    };
+  }, [deckContainerSize, layoutMetrics.containerStyle.padding]);
   const deckKey = useMemo(() => `${deckSize}-${cardsSeed}-${cardBackOption}`, [deckSize, cardsSeed, cardBackOption]);
 
   const applyLayout = useCallback(
@@ -270,14 +281,22 @@ export default function App() {
         return;
       }
       if (mode === 'fan') {
-        await actions.fan();
+        const fanOptions = layoutMetrics.fanConfig
+          ? {
+              radius: layoutMetrics.fanConfig.radius,
+              spreadAngle: layoutMetrics.fanConfig.spreadAngle,
+              origin: { x: 0, y: layoutMetrics.fanConfig.originY }
+            }
+          : undefined;
+        await actions.fan(fanOptions);
       } else if (mode === 'ring') {
-        await actions.ring({ radius: layoutMetrics.ringRadius });
+        const ringOptions = layoutMetrics.ringRadius ? { radius: layoutMetrics.ringRadius } : undefined;
+        await actions.ring(ringOptions);
       } else {
         await actions.resetStack();
       }
     },
-    [layoutMetrics.ringRadius]
+    [layoutMetrics]
   );
 
   const handleShuffle = useCallback(async () => {
@@ -372,10 +391,15 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (actualLayout === 'ring' && layoutMetrics.ringRadius) {
-      void deckActions.current?.ring({ radius: layoutMetrics.ringRadius });
+    if (deckActions.current == null) {
+      return;
     }
-  }, [actualLayout, layoutMetrics.ringRadius]);
+    if (actualLayout === 'fan') {
+      void applyLayout('fan');
+    } else if (actualLayout === 'ring') {
+      void applyLayout('ring');
+    }
+  }, [actualLayout, applyLayout, layoutMetrics]);
 
   useEffect(() => {
     if (deckActions.current == null) {
@@ -419,7 +443,7 @@ export default function App() {
                 const { width, height } = e.nativeEvent.layout;
                 // eslint-disable-next-line no-console
                 console.log('[App] deckContainer', { width, height });
-                setDeckViewportSize({ width, height });
+                setDeckContainerSize({ width, height });
               }}
             >
               <DeckView
@@ -428,8 +452,8 @@ export default function App() {
                 autoFan
                 drawLimit={drawLimit}
                 ringRadius={layoutMetrics.ringRadius}
+                fanConfig={layoutMetrics.fanConfig}
                 defaultBackAsset={defaultBackAsset}
-                containerPadding={layoutMetrics.containerStyle.padding}
                 cardDimensions={{ width: layoutMetrics.cardWidth, height: layoutMetrics.cardHeight }}
                 scaleLimits={layoutMetrics.scaleLimits}
                 containerSize={deckViewportSize.width > 0 && deckViewportSize.height > 0 ? deckViewportSize : undefined}
@@ -677,7 +701,10 @@ const styles = StyleSheet.create({
   },
   deckContainer: {
     alignSelf: 'stretch',
-    backgroundColor: '#111827',
+    // Distinct color to visualize the deck container bounds in mobile UI
+    backgroundColor: 'rgba(34, 211, 238, 0.06)',
+    borderColor: '#22d3ee',
+    borderWidth: 2,
     borderRadius: 16,
     overflow: 'hidden',
     alignItems: 'center',

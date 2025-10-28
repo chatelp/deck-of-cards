@@ -35,14 +35,20 @@ export const DeckView: React.FC<DeckViewProps> = ({
   scaleLimits,
   debugLogs,
   containerSize: containerSizeProp,
-  containerPadding: containerPaddingProp
+  fanConfig
 }) => {
   const [internalContainerSize, setInternalContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const animationDriver: AnimationDriver = useMemo(
     () => driver ?? new ReanimatedDriver(),
     [driver]
   );
-  const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
+  const deckHook = useDeck(cards, animationDriver, {
+    drawLimit,
+    defaultBackAsset,
+    ringRadius,
+    fanRadius: fanConfig?.radius,
+    fanAngle: fanConfig?.spreadAngle
+  });
   const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
   const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
 
@@ -50,11 +56,13 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   // Sanity log to ensure the correct build of @deck/rn is loaded by Metro/Expo
   useEffect(() => {
-    // eslint-disable-next-line no-console
+    if (!__DEV__ || !debugLogs) {
+      return;
+    }
     console.log('[DeckView] sanity: version=%s debug=%s', RN_DECK_VERSION, !!debugLogs);
-    // eslint-disable-next-line no-console
     console.log('[DeckView] props cardDimensions=%o scaleLimits=%o', cardDimensions, scaleLimits);
-  }, []);
+    console.log('[DeckView] layoutConfig', { fanConfig, ringRadius });
+  }, [debugLogs, cardDimensions, scaleLimits, fanConfig, ringRadius]);
   useEffect(() => {
     if (!autoFan) {
       return;
@@ -128,24 +136,13 @@ export const DeckView: React.FC<DeckViewProps> = ({
     console.log('[DeckView] bounds', { w: deckBounds.width, h: deckBounds.height, cx: deckBounds.centerX, cy: deckBounds.centerY });
   }, [deckBounds, debugLogs]);
 
-  const layoutPadding = useMemo(() => {
-    switch (deck.layoutMode) {
-      case 'ring':
-        return cardHeight * 0.35;
-      case 'fan':
-        return cardHeight * 0.28;
-      case 'stack':
-        return cardHeight * 0.15;
-      default:
-        return cardHeight * 0.2;
-    }
-  }, [deck.layoutMode, cardHeight]);
-
   const effectiveContainerSize = containerSizeProp ?? internalContainerSize;
 
   const deckTransform = useMemo(() => {
     const { width: availableWidth, height: availableHeight } = effectiveContainerSize;
-    const containerPadding = containerPaddingProp ?? 0;
+    const minDimension = Math.max(0, Math.min(availableWidth, availableHeight));
+    const basePaddingRatio = deck.layoutMode === 'ring' ? 0.16 : deck.layoutMode === 'fan' ? 0.12 : 0.08;
+    const layoutPadding = Math.max(8, Math.min(cardHeight * basePaddingRatio, minDimension * 0.12));
     if (
       deckBounds.width === 0 ||
       deckBounds.height === 0 ||
@@ -160,14 +157,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
         translateToCenterY: 0,
         innerWidth: 0,
         innerHeight: 0,
-        containerPadding
+        layoutPadding
       } as const;
     }
 
     const paddedWidth = deckBounds.width + layoutPadding * 2;
     const paddedHeight = deckBounds.height + layoutPadding * 2;
-    const innerWidth = Math.max(0, availableWidth - containerPadding * 2);
-    const innerHeight = Math.max(0, availableHeight - containerPadding * 2);
+    const innerWidth = Math.max(0, availableWidth);
+    const innerHeight = Math.max(0, availableHeight);
     const scaleX = innerWidth / paddedWidth;
     const scaleY = innerHeight / paddedHeight;
     let scale = Math.min(scaleX, scaleY, 1);
@@ -189,14 +186,14 @@ export const DeckView: React.FC<DeckViewProps> = ({
       scale: resolvedScale,
       translateToOriginX: -deckBounds.centerX,
       translateToOriginY: -deckBounds.centerY,
-      // Center within the inner content area offset by container padding
-      translateToCenterX: containerPadding + innerWidth / 2,
-      translateToCenterY: containerPadding + innerHeight / 2,
+      // Center within the available content area
+      translateToCenterX: innerWidth / 2,
+      translateToCenterY: innerHeight / 2,
       innerWidth,
       innerHeight,
-      containerPadding
+      layoutPadding
     } as const;
-  }, [deckBounds, effectiveContainerSize, layoutPadding, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius, containerPaddingProp]);
+  }, [deckBounds, effectiveContainerSize, deck.layoutMode, debugLogs, scaleLimits, cardWidth, cardHeight, ringRadius]);
 
   const deckTransformStyle = useMemo<ViewStyle>(() => {
     const transforms: NonNullable<ViewStyle['transform']> = [];
@@ -220,7 +217,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
         translateToOriginX: deckTransform.translateToOriginX,
         translateToOriginY: deckTransform.translateToOriginY,
         scale: deckTransform.scale,
-        containerPadding: deckTransform.containerPadding,
+        layoutPadding: deckTransform.layoutPadding,
         innerWidth: deckTransform.innerWidth,
         innerHeight: deckTransform.innerHeight
       });
