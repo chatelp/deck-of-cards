@@ -47,28 +47,35 @@ export interface DeckViewActions {
 }
 
 export interface DeckViewProps {
+  // Core data
   cards: CardData[];
-  driver?: AnimationDriver;
-  selectedIds?: string[];
+  
+  // Behavior
+  autoFan?: boolean;
+  drawLimit?: number;
+  
+  // Assets
+  defaultBackAsset?: string | number;
+  
+  // Styling
+  style?: StyleProp<ViewStyle>;
+  
+  // Dimension (external container size)
+  containerSize?: { width: number; height: number };
+  
+  // Callbacks
   onSelectCard?: (cardId: string, selected: boolean) => void;
   onDrawCard?: (card: CardState) => void;
   onFlipCard?: (cardId: string, faceUp: boolean) => void;
   onDeckStateChange?: (state: DeckState) => void;
+  onDeckReady?: (actions: DeckViewActions) => void;
+  
+  // Rendering
   renderCardFace: (props: CardRenderProps) => ReactNode;
   renderCardBack?: (props: CardRenderProps) => ReactNode;
-  drawLimit?: number;
-  defaultBackAsset?: string | number;
-  ringRadius?: number;
-  layoutMode?: 'stack' | 'fan' | 'grid';
-  autoFan?: boolean;
-  style?: StyleProp<ViewStyle>;
-  onDeckReady?: (actions: DeckViewActions) => void;
-  cardDimensions?: { width: number; height: number };
-  scaleLimits?: { minScale: number; maxScale: number };
+  
+  // Advanced
+  driver?: AnimationDriver;
+  selectedIds?: string[];
   debugLogs?: boolean;
-  containerSize?: { width: number; height: number };
-  fanConfig?: {
-    radius?: number;
-    spreadAngle?: number;
-  };
 }

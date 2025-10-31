@@ -26,6 +26,33 @@ export interface DeckLayoutMetrics {
 
 const CARD_ASPECT = CARD_WIDTH / CARD_HEIGHT;
 
+// Estimate deck bounds for a given layout mode and card dimensions
+function estimateDeckBounds(layout: LayoutMode, cardWidth: number, cardHeight: number) {
+  const cardDiagonal = Math.sqrt(cardWidth ** 2 + cardHeight ** 2);
+
+  switch (layout) {
+    case 'stack':
+      return { width: cardWidth, height: cardHeight };
+
+    case 'ring': {
+      // Estimate ring diameter (simplified - assumes reasonable number of cards)
+      const ringDiameter = cardDiagonal * 2.5; // Rough estimate
+      return { width: ringDiameter, height: ringDiameter };
+    }
+
+    case 'fan': {
+      // Estimate fan bounds based on radius and spread
+      const fanRadius = Math.max(cardHeight * 1.1, cardWidth * 0.8);
+      const spreadWidth = fanRadius * 2;
+      const spreadHeight = fanRadius * 1.2; // Fan extends downward
+      return { width: spreadWidth, height: spreadHeight };
+    }
+
+    default:
+      return { width: cardWidth, height: cardHeight };
+  }
+}
+
 export function getResponsiveCardSize(availableWidth: number, layout: LayoutMode, availableHeight?: number): {
   width: number;
   height: number;
@@ -44,6 +71,8 @@ export function getResponsiveCardSize(availableWidth: number, layout: LayoutMode
 }
 
 export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode, containerSize?: { width: number; height: number }): DeckLayoutMetrics {
+  // If we have container size, use it to compute baked scale for card dimensions
+  const hasContainerSize = containerSize && containerSize.width > 0 && containerSize.height > 0;
   const safeWidth = Math.max(320, viewportWidth - 32);
 
   const baseMaxWidth = layout === 'ring'
@@ -66,6 +95,7 @@ export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode, 
   const innerWidth = Math.max(120, measuredWidth - basePadding * 2);
   const innerHeight = Math.max(160, measuredHeight - basePadding * 2);
 
+  // Calculate card size based on available space
   const cardSize = getResponsiveCardSize(innerWidth, layout, innerHeight);
 
   const containerStyle = {
@@ -78,6 +108,7 @@ export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode, 
 
   if (layout === 'ring') {
     const cardDiagonal = Math.sqrt(cardSize.width ** 2 + cardSize.height ** 2);
+    // Since cardSize already includes baked scale, we can compute ringRadius relative to inner dimensions
     const ringRadius = Math.max(36, (Math.min(innerWidth, innerHeight) - cardDiagonal) / 2);
     return {
       cardWidth: cardSize.width,
@@ -92,11 +123,13 @@ export function getDeckLayoutMetrics(viewportWidth: number, layout: LayoutMode, 
   }
 
   if (layout === 'fan') {
-    const maxRadiusByWidth = innerWidth / 2;
-    const maxRadiusByHeight = innerHeight * 0.95;
+    const cardDiagonal = Math.sqrt(cardSize.width ** 2 + cardSize.height ** 2);
+    // Compute fan parameters relative to inner dimensions, accounting for baked scale in cardSize
+    const maxRadiusByWidth = (innerWidth - cardDiagonal) / 2;
+    const maxRadiusByHeight = innerHeight - cardSize.height * 0.8; // Leave some space at bottom
     const fanRadius = Math.max(cardSize.height * 1.1, Math.min(maxRadiusByWidth, maxRadiusByHeight));
     const spreadAngle = Math.PI * 0.95;
-    const originY = cardSize.height * 0.45;
+    const originY = cardSize.height * 0.45; // Origin relative to card height
     return {
       cardWidth: cardSize.width,
       cardHeight: cardSize.height,

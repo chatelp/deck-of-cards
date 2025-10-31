@@ -12,7 +12,6 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { DeckView, DeckViewActions } from '@deck/rn';
 import { CardData, CardState, DeckState } from '@deck/core';
-import { getDeckLayoutMetrics, LayoutMode } from './layoutMetrics';
 
 const CARD_BACK_LIGHT = require('../assets/cards/card-back-light.png');
 const CARD_BACK_DARK = require('../assets/cards/card-back-dark.png');
@@ -230,8 +229,8 @@ export default function App() {
   const [deckSize, setDeckSize] = useState<number>(10);
   const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
-  const [desiredLayout, setDesiredLayout] = useState<LayoutMode>('fan');
-  const [actualLayout, setActualLayout] = useState<LayoutMode>('fan');
+  const [desiredLayout, setDesiredLayout] = useState<'fan' | 'ring' | 'stack'>('fan');
+  const [actualLayout, setActualLayout] = useState<'fan' | 'ring' | 'stack'>('fan');
   const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -254,49 +253,23 @@ export default function App() {
   const faceUpCount = Object.values(faceUp).filter(Boolean).length;
   const selectedCard = drawnCards.find((card) => card.id === selectedCardId) ?? null;
   const [deckContainerSize, setDeckContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  const layoutMetrics = useMemo(
-    () => getDeckLayoutMetrics(viewportWidth, actualLayout, deckContainerSize),
-    [viewportWidth, actualLayout, deckContainerSize]
-  );
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[App] metrics', { viewportWidth, actualLayout, layoutMetrics });
-  }, [viewportWidth, actualLayout, layoutMetrics]);
-
-  const deckContainerStyle = useMemo(() => [styles.deckContainer, layoutMetrics.containerStyle], [layoutMetrics]);
-
-  const deckViewportSize = useMemo(() => {
-    const padding = layoutMetrics.containerStyle.padding ?? 0;
-    return {
-      width: Math.max(0, deckContainerSize.width - padding * 2),
-      height: Math.max(0, deckContainerSize.height - padding * 2)
-    };
-  }, [deckContainerSize, layoutMetrics.containerStyle.padding]);
   const deckKey = useMemo(() => `${deckSize}-${cardsSeed}-${cardBackOption}`, [deckSize, cardsSeed, cardBackOption]);
 
   const applyLayout = useCallback(
-    async (mode: LayoutMode) => {
+    async (mode: 'fan' | 'ring' | 'stack') => {
       const actions = deckActions.current;
       if (!actions) {
         return;
       }
       if (mode === 'fan') {
-        const fanOptions = layoutMetrics.fanConfig
-          ? {
-              radius: layoutMetrics.fanConfig.radius,
-              spreadAngle: layoutMetrics.fanConfig.spreadAngle,
-              origin: { x: 0, y: layoutMetrics.fanConfig.originY }
-            }
-          : undefined;
-        await actions.fan(fanOptions);
+        await actions.fan();
       } else if (mode === 'ring') {
-        const ringOptions = layoutMetrics.ringRadius ? { radius: layoutMetrics.ringRadius } : undefined;
-        await actions.ring(ringOptions);
+        await actions.ring();
       } else {
         await actions.resetStack();
       }
     },
-    [layoutMetrics]
+    []
   );
 
   const handleShuffle = useCallback(async () => {
@@ -399,7 +372,7 @@ export default function App() {
     } else if (actualLayout === 'ring') {
       void applyLayout('ring');
     }
-  }, [actualLayout, applyLayout, layoutMetrics]);
+  }, [actualLayout, applyLayout]);
 
   useEffect(() => {
     if (deckActions.current == null) {
@@ -438,7 +411,7 @@ export default function App() {
 
           <View style={styles.deckSection}>
             <View
-              style={deckContainerStyle}
+              style={styles.deckContainer}
               onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;
                 // eslint-disable-next-line no-console
@@ -451,12 +424,8 @@ export default function App() {
                 cards={cards}
                 autoFan
                 drawLimit={drawLimit}
-                ringRadius={layoutMetrics.ringRadius}
-                fanConfig={layoutMetrics.fanConfig}
                 defaultBackAsset={defaultBackAsset}
-                cardDimensions={{ width: layoutMetrics.cardWidth, height: layoutMetrics.cardHeight }}
-                scaleLimits={layoutMetrics.scaleLimits}
-                containerSize={deckViewportSize.width > 0 && deckViewportSize.height > 0 ? deckViewportSize : undefined}
+                containerSize={deckContainerSize.width > 0 && deckContainerSize.height > 0 ? deckContainerSize : undefined}
                 debugLogs
                 onDeckReady={(actions) => {
                   deckActions.current = actions;
@@ -701,6 +670,7 @@ const styles = StyleSheet.create({
   },
   deckContainer: {
     alignSelf: 'stretch',
+    height: 480,
     // Distinct color to visualize the deck container bounds in mobile UI
     backgroundColor: 'rgba(34, 211, 238, 0.06)',
     borderColor: '#22d3ee',

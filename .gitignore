@@ -17,3 +17,8 @@ dist/
 
 # OS files
 .DS_Store
+
+# Temporary documentation files (keep only docs/ folder)
+*.md
+!README.md
+!docs/**/*.md
