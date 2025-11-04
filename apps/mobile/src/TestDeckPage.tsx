@@ -13,15 +13,18 @@ interface TestCard extends CardData {
 }
 
 // Créer 10 cartes simples pour les tests
-const createTestCards = (): TestCard[] => {
-  return Array.from({ length: 10 }, (_, i) => ({
+const createTestCards = (): TestCard[] =>
+  Array.from({ length: 10 }, (_, i) => ({
     id: `test-card-${i}`,
     name: `Card ${i + 1}`,
     backAsset: CARD_BACK_LIGHT
   }));
-};
 
-export default function TestDeckPage() {
+interface TestDeckScreenProps {
+  showDebugOverlay?: boolean;
+}
+
+export function TestDeckScreen({ showDebugOverlay = true }: TestDeckScreenProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({
     width: 0,
@@ -30,34 +33,33 @@ export default function TestDeckPage() {
 
   const cards = useMemo(() => createTestCards(), []);
 
-  const instantDriver = useMemo<AnimationDriver>(() => ({
-    play: async () => {
-      /* no-op */
-    },
-    cancel: () => {
-      /* no-op */
-    }
-  }), []);
+  const instantDriver = useMemo<AnimationDriver>(
+    () => ({
+      play: async () => {
+        /* no-op */
+      },
+      cancel: () => {
+        /* no-op */
+      }
+    }),
+    []
+  );
 
   const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    
-    // Log seulement au changement réel
-    if (containerSize.width !== width || containerSize.height !== height) {
-      // Log désactivé - inclus dans le log condensé de DeckView
-      setContainerSize({ width, height });
-    }
-  }, [containerSize]);
+    setContainerSize((prev) => {
+      if (Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5) {
+        return prev;
+      }
+      return { width, height };
+    });
+  }, []);
 
   const handleDeckReady = useCallback((actions: any) => {
     // Auto-fan après un court délai
     setTimeout(() => {
-      actions.fan();
+      void actions.fan();
     }, 100);
-  }, []);
-
-  const handleDeckStateChange = useCallback((state: any) => {
-    // Log désactivé - trop répétitif, log condensé dans DeckView
   }, []);
 
   // Render simple pour les faces de cartes
@@ -80,36 +82,45 @@ export default function TestDeckPage() {
   }, []);
 
   return (
+    <View style={styles.safeArea}>
+      <View style={styles.container} onLayout={handleContainerLayout}>
+        {showDebugOverlay && (
+          <>
+            <View style={styles.centerIndicatorVertical} />
+            <View style={styles.centerIndicatorHorizontal} />
+            <View style={styles.infoOverlay}>
+              <Text style={styles.infoText}>Screen: {screenWidth.toFixed(0)} × {screenHeight.toFixed(0)}</Text>
+              <Text style={styles.infoText}>
+                Container: {containerSize.width.toFixed(0)} × {containerSize.height.toFixed(0)}
+              </Text>
+              <Text style={styles.infoText}>Center: ({Math.round(containerSize.width / 2)}, {Math.round(containerSize.height / 2)})</Text>
+            </View>
+          </>
+        )}
+
+        {containerSize.width > 0 && containerSize.height > 0 && (
+          <DeckView
+            driver={instantDriver}
+            cards={cards}
+            containerSize={containerSize}
+            autoFan
+            debugLogs={true}
+            defaultBackAsset={CARD_BACK_LIGHT}
+            renderCardFace={renderCardFace}
+            renderCardBack={renderCardBack}
+            onDeckReady={handleDeckReady}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+export default function TestDeckPage() {
+  return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container} onLayout={handleContainerLayout}>
-          {/* Indicateurs visuels pour le centrage */}
-          <View style={styles.centerIndicatorVertical} />
-          <View style={styles.centerIndicatorHorizontal} />
-          
-          {/* Container info en overlay */}
-          <View style={styles.infoOverlay}>
-            <Text style={styles.infoText}>Screen: {screenWidth.toFixed(0)} × {screenHeight.toFixed(0)}</Text>
-            <Text style={styles.infoText}>Container: {containerSize.width.toFixed(0)} × {containerSize.height.toFixed(0)}</Text>
-            <Text style={styles.infoText}>Center: ({containerSize.width / 2}, {containerSize.height / 2})</Text>
-          </View>
-
-          {/* DeckView minimal */}
-          {containerSize.width > 0 && containerSize.height > 0 && (
-            <DeckView
-              driver={instantDriver}
-              cards={cards}
-              containerSize={containerSize}
-              autoFan={true}
-              debugLogs={true}
-              defaultBackAsset={CARD_BACK_LIGHT}
-              renderCardFace={renderCardFace}
-              renderCardBack={renderCardBack}
-              onDeckReady={handleDeckReady}
-              onDeckStateChange={handleDeckStateChange}
-            />
-          )}
-        </View>
+        <TestDeckScreen />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -183,4 +194,3 @@ const styles = StyleSheet.create({
     fontSize: 48
   }
 });
-
