@@ -370,6 +370,12 @@ function MainDeckScreen() {
 
         <View style={mainStyles.deckSection}>
           <View style={mainStyles.deckContainer} onLayout={handleDeckContainerLayout}>
+            {__DEV__ && (
+              <>
+                <View style={mainStyles.centerIndicatorVertical} />
+                <View style={mainStyles.centerIndicatorHorizontal} />
+              </>
+            )}
             {deckContainerSize.width > 0 && deckContainerSize.height > 0 && (
               <DeckView
                 key={deckKey}
@@ -614,6 +620,24 @@ const mainStyles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  centerIndicatorVertical: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: 'rgba(255, 0, 0, 0.35)',
+    zIndex: 5
+  },
+  centerIndicatorHorizontal: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(0, 255, 0, 0.35)',
+    zIndex: 5
   },
   statsSection: {
     flexDirection: 'row',
