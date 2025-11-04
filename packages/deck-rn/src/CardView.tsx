@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CardViewProps } from './types';
@@ -18,17 +18,24 @@ export const CardView: React.FC<CardViewProps> = ({
   style,
   driver,
   cardDimensions,
-  debugLogs
+  debugLogs,
+  isResizing
 }) => {
   const cardWidth = cardDimensions?.width ?? CARD_WIDTH;
   const cardHeight = cardDimensions?.height ?? CARD_HEIGHT;
 
+  // Initialiser avec les valeurs du layout pour affichage instantané
+  const initialTranslateX = layout.x - cardWidth / 2;
+  const initialTranslateY = layout.y - cardHeight / 2;
+  
   const rotation = useSharedValue(layout.rotation);
-  const translateX = useSharedValue(layout.x - cardWidth / 2);
-  const translateY = useSharedValue(layout.y - cardHeight / 2);
+  const translateX = useSharedValue(initialTranslateX);
+  const translateY = useSharedValue(initialTranslateY);
   const scale = useSharedValue(layout.scale);
   const rotateY = useSharedValue(state.faceUp ? 180 : 0);
   const zIndex = useSharedValue(layout.zIndex);
+  
+  const isFirstRender = useRef(true);
 
   const log = (label: string, payload?: unknown) => {
     if (!__DEV__ || !debugLogs) return;
@@ -39,13 +46,29 @@ export const CardView: React.FC<CardViewProps> = ({
     if (driver instanceof ReanimatedDriver) {
       return;
     }
-    rotation.value = withTiming(layout.rotation, { duration: 250 });
-    translateX.value = withTiming(layout.x - cardWidth / 2, { duration: 250 });
-    translateY.value = withTiming(layout.y - cardHeight / 2, { duration: 250 });
-    scale.value = withTiming(layout.scale, { duration: 250 });
+    
+    const newTranslateX = layout.x - cardWidth / 2;
+    const newTranslateY = layout.y - cardHeight / 2;
+    
+    // Pour le premier rendu, assigner directement SANS animation
+    if (isFirstRender.current) {
+      rotation.value = layout.rotation;
+      translateX.value = newTranslateX;
+      translateY.value = newTranslateY;
+      scale.value = layout.scale;
+      zIndex.value = layout.zIndex;
+      isFirstRender.current = false;
+      return;
+    }
+    
+    // Pendant un redimensionnement, appliquer instantanément pour éviter les clignotements
+    const duration = isResizing ? 0 : 150;
+    rotation.value = withTiming(layout.rotation, { duration });
+    translateX.value = withTiming(newTranslateX, { duration });
+    translateY.value = withTiming(newTranslateY, { duration });
+    scale.value = withTiming(layout.scale, { duration });
     zIndex.value = layout.zIndex;
-    log('layoutUpdate', { layout, cardWidth, cardHeight });
-  }, [layout, rotation, translateX, translateY, scale, zIndex, driver, cardWidth, cardHeight]);
+  }, [layout, rotation, translateX, translateY, scale, zIndex, driver, cardWidth, cardHeight, isResizing]);
 
   useEffect(() => {
     if (driver instanceof ReanimatedDriver) {
@@ -101,6 +124,8 @@ export const CardView: React.FC<CardViewProps> = ({
     invokeAsync(onSelect);
     log('pressOut -> select');
   }, [invokeAsync, onSelect, isSelected]);
+
+  // Logs individuels désactivés - log condensé dans DeckView
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [

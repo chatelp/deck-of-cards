@@ -33,6 +33,7 @@ export interface CardViewProps {
   onSelect?: () => void | Promise<void>;
   renderFace: (props: CardRenderProps) => ReactNode;
   renderBack: (props: CardRenderProps) => ReactNode;
+  isResizing?: boolean;
 }
 
 export interface DeckViewActions {
