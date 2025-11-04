@@ -116,38 +116,42 @@ export function useDeck(
       dispatch({ type: 'SET_STATE', payload: nextDeck });
       if (!animationsEnabledRef.current) {
         driver.cancel?.();
-        return;
+        return sequence;
       }
       if (manageLayoutExternallyRef.current) {
-        return;
+        return sequence;
       }
       await driver.play(sequence);
+      return sequence;
     },
     [driver]
   );
 
   const fanOut = useCallback(async (options?: FanOptions) => {
     const { deck: nextDeck, sequence } = fan(deck, options);
-    await applySequence(nextDeck, sequence);
+    const result = await applySequence(nextDeck, sequence);
     observable.emit({ type: 'fan', payload: { layouts: nextDeck.positions } });
+    return result;
   }, [deck, applySequence]);
 
   const resetStack = useCallback(async () => {
     const { deck: nextDeck, sequence } = stack(deck);
-    await applySequence(nextDeck, sequence);
+    return applySequence(nextDeck, sequence);
   }, [deck, applySequence]);
 
   const ring = useCallback(async (options?: RingOptions) => {
     const { deck: nextDeck, sequence } = ringDeck(deck, options);
-    await applySequence(nextDeck, sequence);
+    const result = await applySequence(nextDeck, sequence);
     observable.emit({ type: 'ring', payload: { layouts: nextDeck.positions } });
+    return result;
   }, [deck, applySequence]);
 
   const shuffle = useCallback(
     async (options?: ShuffleOptions) => {
       const { deck: nextDeck, sequence } = shuffleDeck(deck, options);
-      await applySequence(nextDeck, sequence);
+      const result = await applySequence(nextDeck, sequence);
       observable.emit({ type: 'shuffle', payload: { order: nextDeck.cards.map((card) => card.id) } });
+      return result;
     },
     [deck, applySequence]
   );
@@ -155,11 +159,12 @@ export function useDeck(
   const flip = useCallback(
     async (cardId: CardId) => {
       const { deck: nextDeck, sequence } = flipCard(deck, cardId);
-      await applySequence(nextDeck, sequence);
+      const result = await applySequence(nextDeck, sequence);
       const card = nextDeck.cards.find((c) => c.id === cardId);
       if (card) {
         observable.emit({ type: 'flip', payload: { cardId, faceUp: card.faceUp } });
       }
+      return result;
     },
     [deck, applySequence]
   );
@@ -167,7 +172,7 @@ export function useDeck(
   const animateTo = useCallback(
     async (cardId: CardId, target: ReturnType<typeof animateCard>['sequence']['steps'][number]['target']) => {
       const { deck: nextDeck, sequence } = animateCard(deck, cardId, target);
-      await applySequence(nextDeck, sequence);
+      return applySequence(nextDeck, sequence);
     },
     [deck, applySequence]
   );
@@ -240,10 +245,11 @@ export function useDeck(
         layoutResult = fan(baseDeck);
       }
       const { deck: nextDeck, sequence } = layoutResult;
-      dispatch({ type: 'SET_STATE', payload: nextDeck });
-      void driver.play(sequence).catch((error) => {
+      try {
+        await applySequence(nextDeck, sequence);
+      } catch (error) {
         console.error('[useDeck] drawCard animation error', error);
-      });
+      }
       observable.emit({ type: 'draw', payload: { cardId, card: drawnCard } });
       return drawnCard;
     },

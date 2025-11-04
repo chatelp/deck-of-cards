@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import {
   AnimationDriver,
+  AnimationSequence,
   CardData,
   CardLayout,
   CardState,
@@ -38,14 +39,14 @@ export interface CardViewProps {
 }
 
 export interface DeckViewActions {
-  fan: (options?: FanOptions) => Promise<void>;
-  ring: (options?: RingOptions) => Promise<void>;
-  shuffle: (options?: ShuffleOptions) => Promise<void>;
-  flip: (cardId: string) => Promise<void>;
-  animateTo: (cardId: string, target: CardAnimationTarget) => Promise<void>;
+  fan: (options?: FanOptions) => Promise<AnimationSequence | undefined>;
+  ring: (options?: RingOptions) => Promise<AnimationSequence | undefined>;
+  shuffle: (options?: ShuffleOptions) => Promise<AnimationSequence | undefined>;
+  flip: (cardId: string) => Promise<AnimationSequence | undefined>;
+  animateTo: (cardId: string, target: CardAnimationTarget) => Promise<AnimationSequence | undefined>;
   selectCard: (cardId: string) => Promise<boolean | undefined>;
   drawCard: (cardId: string) => Promise<CardState | undefined>;
-  resetStack: () => Promise<void>;
+  resetStack: () => Promise<AnimationSequence | undefined>;
   setLayoutMode?: (layoutMode: DeckLayoutMode) => Promise<void>;
 }
 

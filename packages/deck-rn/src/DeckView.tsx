@@ -2,10 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, StyleSheet, Image, Text, LayoutChangeEvent, ViewStyle } from 'react-native';
 import {
   AnimationDriver,
+  AnimationSequence,
   CardData,
   CardLayout,
   CardState,
   DeckState,
+  FanOptions,
+  RingOptions,
+  ShuffleOptions,
   computeFanLayout,
   computeLineLayout,
   computeRingLayout,
@@ -167,16 +171,6 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const lastFannedLengthRef = useRef<number | null>(null);
   const lastSyncedBasePositionsRef = useRef<string>('');
 
-  useEffect(() => {
-    if (!layoutModeProp) {
-      return;
-    }
-    if (deck.layoutMode === layoutModeProp) {
-      return;
-    }
-    void setLayoutMode(layoutModeProp);
-  }, [layoutModeProp, deck.layoutMode, setLayoutMode]);
-
   const effectiveLayoutMode = layoutModeProp ?? deck.layoutMode;
 
   const basePositions = useMemo(() => {
@@ -237,6 +231,95 @@ export const DeckView: React.FC<DeckViewProps> = ({
     lastSyncedBasePositionsRef.current = basePositionsSignature;
     void setPositions(basePositions);
   }, [basePositions, basePositionsSignature, setPositions, deck.cards.length]);
+
+  const playSequence = useCallback(
+    async (sequence?: AnimationSequence) => {
+      if (!sequence || sequence.steps.length === 0) {
+        return sequence;
+      }
+      if (isTransitioning) {
+        return sequence;
+      }
+      try {
+        await animationDriver.play(sequence);
+      } catch (error) {
+        if (__DEV__) {
+          console.error('[DeckView] animation error', error);
+        }
+      }
+      return sequence;
+    },
+    [animationDriver, isTransitioning]
+  );
+
+  const fanWithAnimation = useCallback(
+    async (options?: FanOptions) => {
+      const sequence = await fan({
+        ...options,
+        radius: layoutParams.fanRadius,
+        spreadAngle: layoutParams.fanSpread,
+        origin: layoutParams.fanOrigin
+      });
+      return playSequence(sequence);
+    },
+    [fan, layoutParams.fanRadius, layoutParams.fanSpread, layoutParams.fanOrigin, playSequence]
+  );
+
+  const ringWithAnimation = useCallback(
+    async (options?: RingOptions) => {
+      const sequence = await ring({
+        radius: layoutParams.ringRadius,
+        ...options
+      });
+      return playSequence(sequence);
+    },
+    [ring, layoutParams.ringRadius, playSequence]
+  );
+
+  const stackWithAnimation = useCallback(async () => {
+    const sequence = await resetStack();
+    return playSequence(sequence);
+  }, [resetStack, playSequence]);
+
+  const shuffleWithAnimation = useCallback(
+    async (options?: ShuffleOptions) => {
+      const sequence = await shuffle(options);
+      return playSequence(sequence);
+    },
+    [shuffle, playSequence]
+  );
+
+  const flipWithAnimation = useCallback(
+    async (cardId: string) => {
+      const sequence = await flip(cardId);
+      return playSequence(sequence);
+    },
+    [flip, playSequence]
+  );
+
+  const animateToWithAnimation = useCallback(
+    async (cardId: string, target: CardAnimationTarget) => {
+      const sequence = await animateTo(cardId, target);
+      return playSequence(sequence);
+    },
+    [animateTo, playSequence]
+  );
+
+  useEffect(() => {
+    if (!layoutModeProp) {
+      return;
+    }
+    if (deck.layoutMode === layoutModeProp) {
+      return;
+    }
+    if (layoutModeProp === 'ring') {
+      void ringWithAnimation();
+    } else if (layoutModeProp === 'stack') {
+      void stackWithAnimation();
+    } else {
+      void fanWithAnimation();
+    }
+  }, [layoutModeProp, deck.layoutMode, fanWithAnimation, ringWithAnimation, stackWithAnimation]);
 
   const deckScene = useMemo(() => {
     if (
@@ -521,27 +604,35 @@ export const DeckView: React.FC<DeckViewProps> = ({
     }
     // Log autoFan executing - désactivé
     lastFannedLengthRef.current = deck.cards.length;
-    void fan();
-  }, [autoFan, deck.cards.length, deck.layoutMode, fan, debugLogs]);
+    void fanWithAnimation();
+  }, [autoFan, deck.cards.length, deck.layoutMode, fanWithAnimation, debugLogs]);
 
   useEffect(() => {
     if (onDeckReady) {
-      const wrappedAnimateTo = async (cardId: string, target: CardAnimationTarget) => {
-        await animateTo(cardId, target);
-      };
       onDeckReady({
-        fan,
-        ring,
-        shuffle,
-        flip,
-        animateTo: wrappedAnimateTo,
+        fan: fanWithAnimation,
+        ring: ringWithAnimation,
+        shuffle: shuffleWithAnimation,
+        flip: flipWithAnimation,
+        animateTo: animateToWithAnimation,
         selectCard,
         drawCard,
-        resetStack,
+        resetStack: stackWithAnimation,
         setLayoutMode
       });
     }
-  }, [onDeckReady, fan, ring, shuffle, flip, animateTo, selectCard, drawCard, resetStack, setLayoutMode]);
+  }, [
+    onDeckReady,
+    fanWithAnimation,
+    ringWithAnimation,
+    shuffleWithAnimation,
+    flipWithAnimation,
+    animateToWithAnimation,
+    selectCard,
+    drawCard,
+    stackWithAnimation,
+    setLayoutMode
+  ]);
 
   useEffect(() => {
     onDeckStateChange?.(deck);
