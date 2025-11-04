@@ -13,7 +13,7 @@ import {
   ShuffleOptions
 } from './models';
 import { DeckObservable } from './observable';
-import { createDeckState, setDeckPositions, updateCardLayout, updateCardState } from './state';
+import { createDeckState, setDeckLayoutMode, setDeckPositions, updateCardLayout, updateCardState } from './state';
 import { fan, ring as ringDeck, stack, shuffle as shuffleDeck, flip as flipCard, animateTo as animateCard } from './primitives';
 
 interface DeckReducerAction {
@@ -266,6 +266,17 @@ export function useDeck(
     [deck]
   );
 
+  const setLayoutMode = useCallback(
+    async (layoutMode: DeckState['layoutMode']) => {
+      if (deck.layoutMode === layoutMode) {
+        return;
+      }
+      const nextDeck = setDeckLayoutMode(deck, layoutMode);
+      dispatch({ type: 'SET_STATE', payload: nextDeck });
+    },
+    [deck]
+  );
+
   const on = useCallback(
     <T extends DeckEventName>(type: T, listener: (event: DeckEvent<T>) => void) => observable.on(type, listener),
     [observable]
@@ -283,6 +294,7 @@ export function useDeck(
     setLayout,
     resetStack,
     setPositions,
+    setLayoutMode,
     on
   };
 }

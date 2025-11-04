@@ -234,7 +234,6 @@ function MainDeckScreen() {
   const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
   const [desiredLayout, setDesiredLayout] = useState<DeckLayoutMode>('fan');
-  const [actualLayout, setActualLayout] = useState<DeckLayoutMode>('fan');
   const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -268,62 +267,36 @@ function MainDeckScreen() {
     });
   }, []);
 
-  const applyLayout = useCallback(
-    async (mode: DeckLayoutMode) => {
-      const actions = deckActions.current;
-      if (!actions) {
-        return;
-      }
-      if (mode === 'fan') {
-        await actions.fan();
-      } else if (mode === 'ring') {
-        await actions.ring();
-      } else {
-        await actions.resetStack();
-      }
-    },
-    []
-  );
-
   const handleShuffle = useCallback(async () => {
     const actions = deckActions.current;
     if (!actions) {
       return;
     }
     await actions.shuffle({ restoreLayout: restoreLayoutAfterShuffle });
-    if (restoreLayoutAfterShuffle) {
-      await applyLayout(desiredLayout);
-    } else {
+    if (!restoreLayoutAfterShuffle) {
       setDesiredLayout('stack');
     }
-  }, [restoreLayoutAfterShuffle, applyLayout, desiredLayout]);
+  }, [restoreLayoutAfterShuffle]);
 
   const handleFan = useCallback(() => {
     setDesiredLayout('fan');
-    void applyLayout('fan');
-  }, [applyLayout]);
+  }, []);
 
   const handleRing = useCallback(() => {
     setDesiredLayout('ring');
-    void applyLayout('ring');
-  }, [applyLayout]);
+  }, []);
 
   const handleStack = useCallback(() => {
     setDesiredLayout('stack');
-    void applyLayout('stack');
-  }, [applyLayout]);
+  }, []);
 
   const handleRestart = useCallback(() => {
     const newSeed = Date.now();
-    const layoutToRestore = actualLayout;
     setCardsSeed(newSeed);
     setDrawnCards([]);
     setFaceUp({});
     setSelectedCardId(null);
-    setTimeout(() => {
-      void applyLayout(layoutToRestore);
-    }, 50);
-  }, [actualLayout, applyLayout]);
+  }, []);
 
   const handleDeckStateChange = useCallback(
     (state: DeckState) => {
@@ -337,10 +310,6 @@ function MainDeckScreen() {
       });
       setFaceUp(nextFaceUp);
 
-      if (state.layoutMode === 'fan' || state.layoutMode === 'ring' || state.layoutMode === 'stack') {
-        setActualLayout(state.layoutMode);
-      }
-
       if (selectedCardId && !state.drawnCards.some((card) => card.id === selectedCardId)) {
         setSelectedCardId(null);
       }
@@ -350,49 +319,23 @@ function MainDeckScreen() {
 
   const handleDeckSizeChange = useCallback(
     (nextSize: number) => {
-      const layoutToRestore = actualLayout;
       setDeckSize(nextSize);
       setDrawnCards([]);
       setFaceUp({});
       setSelectedCardId(null);
-      setTimeout(() => {
-        void applyLayout(layoutToRestore);
-      }, 50);
     },
-    [actualLayout, applyLayout]
+    []
   );
 
   const handleDrawLimitChange = useCallback(
     (nextLimit: number) => {
-      const layoutToRestore = actualLayout;
       setDrawLimit(nextLimit);
       setDrawnCards([]);
       setFaceUp({});
       setSelectedCardId(null);
-      setTimeout(() => {
-        void applyLayout(layoutToRestore);
-      }, 50);
     },
-    [actualLayout, applyLayout]
+    []
   );
-
-  useEffect(() => {
-    if (deckActions.current == null) {
-      return;
-    }
-    if (actualLayout === 'fan') {
-      void applyLayout('fan');
-    } else if (actualLayout === 'ring') {
-      void applyLayout('ring');
-    }
-  }, [actualLayout, applyLayout]);
-
-  useEffect(() => {
-    if (deckActions.current == null) {
-      return;
-    }
-    void applyLayout(desiredLayout);
-  }, [desiredLayout, applyLayout]);
 
   const handleSelectCard = useCallback((cardId: string, selected: boolean) => {
     setSelectedCardId(selected ? cardId : null);
@@ -435,6 +378,7 @@ function MainDeckScreen() {
                 drawLimit={drawLimit}
                 defaultBackAsset={defaultBackAsset}
                 containerSize={deckContainerSize}
+                layoutMode={desiredLayout}
                 debugLogs={__DEV__}
                 onDeckReady={(actions) => {
                   deckActions.current = actions;

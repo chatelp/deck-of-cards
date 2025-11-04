@@ -65,7 +65,8 @@ export const DeckView: React.FC<DeckViewProps> = ({
   style,
   onDeckReady,
   debugLogs,
-  containerSize: containerSizeProp
+  containerSize: containerSizeProp,
+  layoutMode: layoutModeProp
 }) => {
   const {
     orientation: orientationInfo,
@@ -161,10 +162,22 @@ export const DeckView: React.FC<DeckViewProps> = ({
     }
   );
 
-  const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo, setPositions } = deckHook;
+  const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo, setPositions, setLayoutMode } = deckHook;
   const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
   const lastFannedLengthRef = useRef<number | null>(null);
   const lastSyncedBasePositionsRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!layoutModeProp) {
+      return;
+    }
+    if (deck.layoutMode === layoutModeProp) {
+      return;
+    }
+    void setLayoutMode(layoutModeProp);
+  }, [layoutModeProp, deck.layoutMode, setLayoutMode]);
+
+  const effectiveLayoutMode = layoutModeProp ?? deck.layoutMode;
 
   const basePositions = useMemo(() => {
     if (deck.cards.length === 0) {
@@ -179,18 +192,19 @@ export const DeckView: React.FC<DeckViewProps> = ({
         fanAngle: layoutParams.fanSpread,
         ringRadius: layoutParams.ringRadius,
         spacing: layoutParams.spacing
-      }
+      },
+      layoutMode: effectiveLayoutMode
     };
 
-    if (deck.layoutMode === 'ring') {
+    if (effectiveLayoutMode === 'ring') {
       return computeRingLayout(deckForLayout, { radius: layoutParams.ringRadius });
     }
 
-    if (deck.layoutMode === 'stack') {
+    if (effectiveLayoutMode === 'stack') {
       return computeStackLayout(deckForLayout);
     }
 
-    if (deck.layoutMode === 'line') {
+    if (effectiveLayoutMode === 'line') {
       return computeLineLayout(deckForLayout, layoutParams.spacing);
     }
 
@@ -199,7 +213,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
       spreadAngle: layoutParams.fanSpread,
       origin: layoutParams.fanOrigin
     });
-  }, [deck, layoutParams]);
+  }, [deck, layoutParams, effectiveLayoutMode]);
 
   const basePositionsSignature = useMemo(() => {
     return deck.cards
@@ -523,10 +537,11 @@ export const DeckView: React.FC<DeckViewProps> = ({
         animateTo: wrappedAnimateTo,
         selectCard,
         drawCard,
-        resetStack
+        resetStack,
+        setLayoutMode
       });
     }
-  }, [onDeckReady, fan, ring, shuffle, flip, animateTo, selectCard, drawCard, resetStack]);
+  }, [onDeckReady, fan, ring, shuffle, flip, animateTo, selectCard, drawCard, resetStack, setLayoutMode]);
 
   useEffect(() => {
     onDeckStateChange?.(deck);

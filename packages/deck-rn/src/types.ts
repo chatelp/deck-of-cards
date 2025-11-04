@@ -5,6 +5,7 @@ import {
   CardLayout,
   CardState,
   CardTransform,
+  DeckLayoutMode,
   DeckState,
   FanOptions,
   RingOptions,
@@ -45,6 +46,7 @@ export interface DeckViewActions {
   selectCard: (cardId: string) => Promise<boolean | undefined>;
   drawCard: (cardId: string) => Promise<CardState | undefined>;
   resetStack: () => Promise<void>;
+  setLayoutMode?: (layoutMode: DeckLayoutMode) => Promise<void>;
 }
 
 export interface DeckViewProps {
@@ -63,6 +65,7 @@ export interface DeckViewProps {
   
   // Dimension (external container size)
   containerSize?: { width: number; height: number };
+  layoutMode?: DeckLayoutMode;
   
   // Callbacks
   onSelectCard?: (cardId: string, selected: boolean) => void;
