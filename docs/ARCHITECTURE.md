@@ -1,347 +1,100 @@
-# 🏗️ Architecture Technique
+# 🏗️ Architecture Technique (2025)
 
-## 📋 Vue d'Ensemble
-
-Le système Deck of Cards est conçu autour d'une **architecture monorepo modulaire** avec séparation claire des responsabilités :
+## Vue d’ensemble
 
 ```
-@deck/core (Logique Métier)
-    ↓ Fournit interfaces et algorithmes
-    ↓
-@deck/web + @deck/rn (Rendu Plateforme)
-    ↓ Intègrent la logique via interfaces communes
-    ↓
-apps/mobile + apps/web (Applications Démo)
+┌───────────────┐
+│   @deck/core  │  ← logique métier pure
+│  (cartes,     │
+│   layouts,    │
+│   états)      │
+└──────┬────────┘
+       │
+       ▼
+┌───────────────┐       ┌───────────────┐
+│   @deck/rn    │       │   @deck/web   │   ← rendus plateforme
+│ DeckView      │       │ DeckView      │
+│ (orchestration│       │ (idem)        │
+│  & animations)│       │               │
+└──────┬────────┘       └───────────────┘
+       │
+       ▼
+┌───────────────┐
+│  Apps démo    │
+│  mobile/web   │
+└───────────────┘
 ```
 
-## 🎯 Principes Architecturaux
-
-### 1. Single Source of Truth
-- Toute la logique métier dans `@deck/core`
-- Interfaces TypeScript partagées
-- Algorithmes de calcul identiques Web/RN
-
-### 2. Séparation Plateforme/Rendu
-- `@deck/core` : 100% agnostique plateforme
-- `@deck/web` + `@deck/rn` : Adapters plateforme-spécifiques
-- Tests unitaires isolés par package
-
-### 3. Performance First
-- Animations GPU-accélérées
-- Calculs memoïsés stratégiquement
-- Bounds calculation optimisée
-
-## 📦 Structure des Packages
-
-### @deck/core
-
-#### Responsabilités
-- **Modèles de données** : `CardState`, `CardLayout`, `DeckState`
-- **Algorithmes de layout** : `computeFanLayout`, `computeRingLayout`, `computeStackLayout`
-- **Gestion d'état** : Hook `useDeck` avec actions (fan, ring, shuffle, etc.)
-- **Utilitaires géométriques** : `calculateDeckBounds`, `pointInPolygon`
-
-#### Architecture Interne
-```typescript
-// Models (agnostiques)
-export interface CardState {
-  id: string;
-  faceUp: boolean;
-  position: 'deck' | 'drawn';
-  data?: any;
-}
-
-// Layout calculations (pure functions)
-export function computeFanLayout(
-  cards: CardState[],
-  origin: Point,
-  radius: number,
-  spread: number
-): Record<CardId, CardLayout> {
-  // Pure calculation logic
-}
-
-// State management (hook)
-export function useDeck(
-  cards: CardData[],
-  animationDriver: AnimationDriver,
-  config: DeckConfig
-): DeckHook {
-  // State + actions
-}
-```
-
-#### Invariants
-- **Pas d'imports React** : Fonctions pures
-- **Pas de calculs de rendu** : Seulement logique métier
-- **Tests unitaires** : 100% coverage des algorithmes
-
-### @deck/web
-
-#### Architecture
-```tsx
-// WebMotionDriver (Framer Motion)
-class WebMotionDriver implements AnimationDriver {
-  register(cardId: string, values: AnimatedValues) {
-    // Framer Motion animations
-  }
-}
-
-// DeckView.tsx (React Component)
-export const DeckView: React.FC<DeckViewProps> = ({ ... }) => {
-  const { deck, fan, ring, shuffle } = useDeck(/*...*/);
-
-  return (
-    <motion.div style={{ scale: fitScale }}>
-      {deck.cards.map(card => (
-        <CardView
-          key={card.id}
-          layout={deck.positions[card.id]}
-          driver={webDriver}
-        />
-      ))}
-    </motion.div>
-  );
-};
-```
-
-#### Stratégie de Scaling
-- **Parent Scale** : `transform: scale(fitScale)` sur le container
-- **Positions logiques** : Cards utilisent positions non-scalées
-- **Avantages** : GPU acceleration, précision parfaite
-
-### @deck/rn
-
-#### Architecture
-```tsx
-// ReanimatedDriver (React Native Reanimated)
-class ReanimatedDriver implements AnimationDriver {
-  register(cardId: string, values: AnimatedValues) {
-    // Reanimated shared values
-  }
-}
-
-// DeckView.tsx (React Component)
-export const DeckView: React.FC<DeckViewProps> = ({ ... }) => {
-  const { deck, fan, ring, shuffle } = useDeck(/*...*/);
-
-  // Baked Scale approach (actuellement)
-  const scaledPositions = useMemo(() => scalePositions(deck.positions, fitScale), []);
-  const scaledCardDimensions = useMemo(() => scaleDimensions(BASE_DIMENSIONS, fitScale), []);
-
-  return (
-    <View>
-      <View style={{ transform: [{ translateX }, { translateY }] }}>
-        {deck.cards.map(card => (
-          <CardView
-            key={card.id}
-            layout={scaledPositions[card.id]}
-            cardDimensions={scaledCardDimensions}
-            driver={reanimatedDriver}
-          />
-        ))}
-      </View>
-    </View>
-  );
-};
-```
-
-#### Stratégie de Scaling (Actuelle)
-- **Baked Scale** : Positions et dimensions scalées individuellement
-- **Translation manuelle** : Centrage calculé après scaling
-- **Complexité** : 6 useMemo, calculs de bounds redondants
-
-#### Migration Planifiée
-```tsx
-// Future: Parent Scale (comme Web)
-return (
-  <Animated.View style={{
-    transform: [
-      { translateX: centerX },
-      { translateY: centerY },
-      { scale: fitScale }  // ← Migration cible
-    ]
-  }}>
-    {deck.cards.map(card => (
-      <CardView
-        key={card.id}
-        layout={deck.positions[card.id]}  // ← Positions logiques
-        cardDimensions={BASE_DIMENSIONS} // ← Dimensions fixes
-        driver={reanimatedDriver}
-      />
-    ))}
-  </Animated.View>
-);
-```
-
-## 🔄 Flux de Données
-
-### 1. Initialisation
-```
-App.tsx → DeckView → useDeck (core) → AnimationDriver
-    ↓           ↓           ↓                    ↓
-  Cards     Container   DeckState           Platform-specific
-  Config    Size       Positions           Animations
-```
-
-### 2. Layout Change
-```
-User Action → DeckView.onPress → useDeck.fan() → computeFanLayout()
-    ↓              ↓              ↓                    ↓
-  Update UI    Animate       Update State        Calculate positions
-  Feedback     Transition    deck.positions      (pure function)
-```
-
-### 3. Animation Flow
-```
-computeLayout() → deck.positions → AnimationDriver.register()
-    ↓                    ↓                    ↓
-Pure calculation   State update       Platform animation
-(synchronous)      (React state)      (GPU accelerated)
-```
-
-## 🎨 Patterns de Conception
-
-### Hook Pattern (@deck/core)
-```typescript
-export function useDeck(cards, driver, config): DeckHook {
-  // State management
-  const [deck, setDeck] = useState<DeckState>(/*...*/);
-
-  // Actions (closures)
-  const fan = useCallback(async () => {
-    const positions = computeFanLayout(/*...*/);
-    await driver.animateTo(positions);
-    setDeck(prev => ({ ...prev, positions }));
-  }, [cards, config]);
-
-  return { deck, fan, ring, shuffle, resetStack };
-}
-```
-
-### Driver Pattern (Plateforme)
-```typescript
-interface AnimationDriver {
-  register(cardId: string, values: AnimatedValues, faceUp: boolean): void;
-  unregister(cardId: string): void;
-  animateTo(positions: Record<string, CardLayout>): Promise<void>;
-}
-```
-
-### Component Composition
-```tsx
-// High-level component (layout logic)
-<DeckView cards={cards} autoFan onDeckStateChange={...}>
-  {/* Render props for customization */}
-  <DeckView.CardFace render={({ data }) => <CustomCard />} />
-  <DeckView.CardBack render={({ asset }) => <CustomBack />} />
-</DeckView>
-
-// Low-level component (single card)
-<CardView
-  state={card}
-  layout={position}
-  driver={animationDriver}
-  cardDimensions={dimensions}
-/>
-```
-
-## 🔧 Optimisations Performance
-
-### Memoization Stratégique
-```typescript
-// ✅ Bon : Calculs lourds memoïsés
-const layoutParams = useMemo(() => computeLayoutParams(...), [dependencies]);
-
-// ✅ Bon : Bounds calculation (1 seul calcul)
-const bounds = useMemo(() => calculateDeckBounds(...), [positions, dimensions]);
-
-// ❌ Mauvais : Tout memoïser (overhead React)
-const everything = useMemo(() => ({ a, b, c }), [deps]);
-```
-
-### Calculs de Bounds Optimsés
-```typescript
-export function calculateDeckBounds(
-  cards: CardState[],
-  positions: Record<CardId, CardLayout>,
-  dimensions: CardDimensions
-): DeckBounds {
-  // Rotation-aware bounds calculation
-  // Accounts for card corners after rotation
-  const halfWidth = Math.abs(cos) * width + Math.abs(sin) * height) / 2;
-  const halfHeight = Math.abs(sin) * width + Math.abs(cos) * height) / 2;
-  // ...
-}
-```
-
-### Animation Batching
-```typescript
-// Group related animations
-await Promise.all([
-  driver.animateTo(newPositions),
-  driver.animateScale(newScales),
-  driver.animateRotation(newRotations)
-]);
-```
-
-## 🧪 Tests et Qualité
-
-### Tests Unitaires
-```typescript
-// Core algorithms (pure functions)
-describe('computeFanLayout', () => {
-  it('should distribute cards evenly in fan', () => {
-    const positions = computeFanLayout(cards, origin, radius, spread);
-    expect(positions).toHaveSymmetricXPositions();
-  });
-});
-
-// Component integration
-describe('DeckView', () => {
-  it('should render all cards', () => {
-    render(<DeckView cards={testCards} />);
-    expect(screen.getAllByTestId('card')).toHaveLength(testCards.length);
-  });
-});
-```
-
-### Tests d'Intégration
-```typescript
-describe('Fan Animation', () => {
-  it('should animate cards to fan positions', async () => {
-    const { getByTestId } = render(<DeckView cards={cards} />);
-
-    fireEvent.click(getByTestId('fan-button'));
-
-    await waitFor(() => {
-      expect(mockDriver.animateTo).toHaveBeenCalledWith(
-        expect.objectContaining({ layoutMode: 'fan' })
-      );
-    });
-  });
-});
-```
-
-## 🚀 Migration et Évolution
-
-### Version Actuelle (Baked Scale)
-- ✅ Fonctionnel mais complexe
-- ✅ Compatible toutes plateformes RN
-- ❌ 6 useMemo, calculs redondants
-
-### Version Cible (Parent Scale)
-- ✅ Architecture simplifiée (2 useMemo)
-- ✅ Performance optimale
-- ✅ Cohérent avec Web
-- ⚠️ Test Reanimated scale support requis
-
-### Plan de Migration
-1. **Phase 1** : Tester Parent Scale avec flag feature
-2. **Phase 2** : Migration progressive (Web déjà compatible)
-3. **Phase 3** : Cleanup code legacy
-4. **Phase 4** : Optimisations additionnelles
+L’idée clef : **`@deck/core` ne décide plus du rendu**. Il expose les structures de données, les fonctions de layout et un hook `useDeck` qui gère uniquement l’état métier (ordre des cartes, tirages, sélection). Les composants de rendu (`@deck/rn`, `@deck/web`) calculent eux‑mêmes les positions brutes et orchestrent les animations.
 
 ---
 
-**📖 Cette architecture garantit maintenabilité, performance et cohérence cross-platform.**
+## @deck/core
+
+### Responsabilités
+- Modèles : `CardState`, `CardLayout`, `DeckState`, etc.
+- Fonctions de layout pures : `computeFanLayout`, `computeRingLayout`, `computeStackLayout`, `computeLineLayout`.
+- Hook `useDeck` :
+  - fournit l’état (`deck`) et les actions métier (`fan`, `ring`, `shuffle`, `drawCard`, …)
+  - **option `manageLayoutExternally`** : quand elle est vraie, le hook ne reconstruit plus les positions ni ne lance d’animations. Il s’en remet entièrement à la vue.
+- Observable d’évènements (`DeckObservable`) et contrat `AnimationDriver` (toujours utilisé par les vues pour leurs propres animations).
+
+### Invariants
+- Fonctions de layout/état 100 % pures, testables.
+- Aucune dépendance React pour les algorithmes.
+- Les animations sont opt-in : `useDeck` ne déclenche `driver.play()` que si `manageLayoutExternally` est `false`.
+
+---
+
+## @deck/rn
+
+### Pipeline DeckView (simplifié)
+1. **Mesure & stabilisation**  
+   `OrientationManager` fournit des dimensions “committed” (layout + render) une fois la rotation terminée. Tant que `isTransitioning`, on désactive les animations (`animationsEnabled = false` dans `useDeck`).
+
+2. **Calculs de base**  
+   `DeckView` calcule les positions brutes via les fonctions pures de `@deck/core` :
+   ```ts
+   const baseLayouts =
+     deck.layoutMode === 'ring' ? computeRingLayout(...) :
+     deck.layoutMode === 'stack' ? computeStackLayout(...) :
+     deck.layoutMode === 'line' ? computeLineLayout(...) :
+     computeFanLayout(...);
+   ```
+   Ces positions sont poussées dans l’état du cœur via `setPositions(baseLayouts)` – **une seule source de vérité visuelle**.
+
+3. **Scène déterministe**  
+   `computeDeckScene(deck, baseLayouts, layoutSize, renderSize)` renvoie :
+   - `fitScale` (scale clampé, basé sur les dimensions engagées),
+   - `scaledPositions`, `scaledBounds`,
+   - `deckTransform` (centrage),
+   - `scaledCardDimensions`.
+   Ce snapshot est utilisé directement pour le rendu.
+
+4. **Animations pilotées par DeckView**  
+   - pendant une rotation : animations coupées (`driver.cancel?.()` + `animationsEnabled=false`);
+   - à la fin : la vue snap le layout final (en rejouant `setPositions(baseLayouts)` une dernière fois), puis rouvre les animations pour les actions utilisateur (tap, shuffle…).
+
+### Avantages
+- Aucun recalcul visuel caché dans `@deck/core`.
+- Une seule scène publiée par orientation (pas de flicker).
+- Facile à debugger : les logs condensés reflètent la scène calculée localement.
+
+---
+
+## @deck/web
+
+La logique est identique côté web :
+- `DeckView` web calcule `baseLayouts`, les synchronise via `setPositions`, puis génère la scène et applique les animations (Framer Motion).
+- Le hook `useDeck` est appelé avec `manageLayoutExternally: true` pour rester cohérent avec RN.
+
+---
+
+## Guidelines pour les évolutions
+
+1. **Toute nouvelle animation doit être déclenchée depuis la vue**, jamais dans `@deck/core`.
+2. **Toujours synchroniser `deck.positions` via `setPositions`** avant d’animer quoi que ce soit : cela aligne l’état métier avec ce qui est affiché.
+3. **Ne pas reposer sur les anciennes optimisations Baked Scale** : la scène (`DeckScene`) est la nouvelle référence (positions scalées + transform).
+4. **Conserver le split dimensions “layout” vs “render”** : `layoutWidth/Height` servent aux calculs, `renderWidth/Height` au centrage final.
+
+Avec cette architecture, React Native et Web partagent la même logique tout en gardant la flexibilité nécessaire pour gérer les transitions et animations de manière fiable.***

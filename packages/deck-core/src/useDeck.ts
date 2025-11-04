@@ -32,7 +32,17 @@ function deckReducer(state: DeckState, action: DeckReducerAction): DeckState {
   }
 }
 
-export function useDeck(cards: CardData[], driver: AnimationDriver, config?: DeckStateConfig) {
+interface UseDeckOptions {
+  animationsEnabled?: boolean;
+  manageLayoutExternally?: boolean;
+}
+
+export function useDeck(
+  cards: CardData[],
+  driver: AnimationDriver,
+  config?: DeckStateConfig,
+  options?: UseDeckOptions
+) {
   const normalizedConfig = useMemo(() => {
     if (!config) {
       return undefined;
@@ -55,10 +65,33 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
     deckRef.current = deck;
   }, [deck]);
   const observable = useMemo(() => new DeckObservable(), []);
+  const animationsEnabledRef = useRef<boolean>(options?.animationsEnabled ?? true);
+  const manageLayoutExternallyRef = useRef<boolean>(options?.manageLayoutExternally ?? false);
+
+  useEffect(() => {
+    animationsEnabledRef.current = options?.animationsEnabled ?? true;
+    if (!animationsEnabledRef.current) {
+      driver.cancel?.();
+    }
+  }, [options?.animationsEnabled, driver]);
+
+  useEffect(() => {
+    manageLayoutExternallyRef.current = options?.manageLayoutExternally ?? false;
+  }, [options?.manageLayoutExternally]);
 
   // When the cards input or config changes, rebuild the deck while preserving the current layout mode
   useEffect(() => {
     const base = createDeckState(cards, normalizedConfig);
+    if (manageLayoutExternallyRef.current) {
+      const current = deckRef.current;
+      const next: DeckState = {
+        ...current,
+        cards: base.cards,
+        config: base.config
+      };
+      dispatch({ type: 'SET_STATE', payload: next });
+      return;
+    }
     const currentLayout = deckRef.current.layoutMode;
     let next = base;
     try {
@@ -81,6 +114,13 @@ export function useDeck(cards: CardData[], driver: AnimationDriver, config?: Dec
   const applySequence = useCallback(
     async (nextDeck: DeckState, sequence: ReturnType<typeof fan>['sequence']) => {
       dispatch({ type: 'SET_STATE', payload: nextDeck });
+      if (!animationsEnabledRef.current) {
+        driver.cancel?.();
+        return;
+      }
+      if (manageLayoutExternallyRef.current) {
+        return;
+      }
       await driver.play(sequence);
     },
     [driver]

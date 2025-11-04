@@ -27,7 +27,7 @@ export interface LayoutParams {
   spacing: number;
 }
 
-export interface PositioningResult {
+export interface DeckScene {
   fitScale: number;
   scaledPositions: Record<string, CardLayout>;
   scaledCardDimensions: { width: number; height: number };
@@ -123,91 +123,69 @@ export function calculateLayoutParams(
   };
 }
 
-export function useDeckPositioning(
+export function computeDeckScene(
   deck: DeckState,
+  basePositions: Record<string, CardLayout>,
   layoutWidth: number,
   layoutHeight: number,
   renderWidth: number,
   renderHeight: number,
   debugLogs: boolean = false
-): PositioningResult {
-  const dimensions = useMemo(() => {
-    const innerWidth = Math.max(0, layoutWidth - LAYOUT_PADDING * 2);
-    const innerHeight = Math.max(0, layoutHeight - LAYOUT_PADDING * 2);
-    const effectiveInnerWidth = Math.max(0, innerWidth - SAFETY_MARGIN * 2);
-    const effectiveInnerHeight = Math.max(0, innerHeight - SAFETY_MARGIN * 2);
+): DeckScene {
+  const innerWidth = Math.max(0, layoutWidth - LAYOUT_PADDING * 2);
+  const innerHeight = Math.max(0, layoutHeight - LAYOUT_PADDING * 2);
+  const effectiveInnerWidth = Math.max(0, innerWidth - SAFETY_MARGIN * 2);
+  const effectiveInnerHeight = Math.max(0, innerHeight - SAFETY_MARGIN * 2);
 
-    return {
-      innerWidth,
-      innerHeight,
-      effectiveInnerWidth,
-      effectiveInnerHeight
-    };
-  }, [layoutWidth, layoutHeight]);
+  const unscaledBounds =
+    deck.cards.length === 0
+      ? ZERO_BOUNDS
+      : calculateDeckBounds(deck.cards, basePositions, {
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
+        });
 
-  const unscaledBounds = useMemo(() => {
-    if (deck.cards.length === 0) {
-      return ZERO_BOUNDS;
-    }
-    return calculateDeckBounds(deck.cards, deck.positions, {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT
-    });
-  }, [deck.cards, deck.positions]);
-
-  const fitScale = useMemo(() => {
-    if (
-      unscaledBounds.width === 0 ||
-      unscaledBounds.height === 0 ||
-      dimensions.effectiveInnerWidth <= 0 ||
-      dimensions.effectiveInnerHeight <= 0
-    ) {
-      return 1;
-    }
-
-    const scaleX = dimensions.effectiveInnerWidth / unscaledBounds.width;
-    const scaleY = dimensions.effectiveInnerHeight / unscaledBounds.height;
+  let fitScale = 1;
+  if (
+    unscaledBounds.width > 0 &&
+    unscaledBounds.height > 0 &&
+    effectiveInnerWidth > 0 &&
+    effectiveInnerHeight > 0
+  ) {
+    const scaleX = effectiveInnerWidth / unscaledBounds.width;
+    const scaleY = effectiveInnerHeight / unscaledBounds.height;
     const scale = Math.min(scaleX, scaleY, 1);
     const clamped = Math.max(MIN_FIT_SCALE, scale);
-    return Math.round(clamped * SCALE_PRECISION) / SCALE_PRECISION;
-  }, [dimensions, unscaledBounds]);
+    fitScale = Math.round(clamped * SCALE_PRECISION) / SCALE_PRECISION;
+  }
 
-  const scaledPositions = useMemo(() => {
-    const result: Record<string, CardLayout> = {};
-    const basePrecision = POSITION_PRECISION;
-    const scalePrecision = SCALE_PRECISION;
-
-    deck.cards.forEach((card) => {
-      const layout = deck.positions[card.id];
-      if (!layout) {
-        return;
-      }
-
-      result[card.id] = {
-        ...layout,
-        x: Math.round(layout.x * fitScale * basePrecision) / basePrecision,
-        y: Math.round(layout.y * fitScale * basePrecision) / basePrecision,
-        rotation: layout.rotation,
-        scale: Math.round((layout.scale ?? 1) * fitScale * scalePrecision) / scalePrecision,
-        zIndex: layout.zIndex
-      };
-    });
-
-    return result;
-  }, [deck.cards, deck.positions, fitScale]);
-
-  const scaledBounds = useMemo(() => {
-    if (deck.cards.length === 0) {
-      return ZERO_BOUNDS;
+  const basePrecision = POSITION_PRECISION;
+  const scalePrecision = SCALE_PRECISION;
+  const scaledPositions: Record<string, CardLayout> = {};
+  deck.cards.forEach((card) => {
+    const layout = basePositions[card.id];
+    if (!layout) {
+      return;
     }
-    return calculateDeckBounds(deck.cards, scaledPositions, {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT
-    });
-  }, [deck.cards, scaledPositions]);
+    scaledPositions[card.id] = {
+      ...layout,
+      x: Math.round(layout.x * fitScale * basePrecision) / basePrecision,
+      y: Math.round(layout.y * fitScale * basePrecision) / basePrecision,
+      rotation: layout.rotation,
+      scale: Math.round((layout.scale ?? 1) * fitScale * scalePrecision) / scalePrecision,
+      zIndex: layout.zIndex
+    };
+  });
+
+  const scaledBounds =
+    deck.cards.length === 0
+      ? ZERO_BOUNDS
+      : calculateDeckBounds(deck.cards, scaledPositions, {
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT
+        });
 
   if (__DEV__ && debugLogs) {
-    const { effectiveInnerWidth, effectiveInnerHeight } = dimensions;
     if (
       scaledBounds.width > effectiveInnerWidth + 1 ||
       scaledBounds.height > effectiveInnerHeight + 1
@@ -222,30 +200,26 @@ export function useDeckPositioning(
     }
   }
 
-  const deckTransform = useMemo(() => {
-    if (renderWidth <= 0 || renderHeight <= 0) {
-      return { translateX: 0, translateY: 0, anchorLeft: 0, anchorTop: 0 };
-    }
-
+  let deckTransform: DeckScene['deckTransform'];
+  if (renderWidth <= 0 || renderHeight <= 0) {
+    deckTransform = { translateX: 0, translateY: 0, anchorLeft: 0, anchorTop: 0 };
+  } else {
     const anchorLeft = renderWidth / 2;
     const anchorTop = renderHeight / 2;
-    const translateX = anchorLeft - scaledBounds.centerX;
-    const translateY = anchorTop - scaledBounds.centerY;
-
-    return {
-      translateX: Math.round(translateX * POSITION_PRECISION) / POSITION_PRECISION,
-      translateY: Math.round(translateY * POSITION_PRECISION) / POSITION_PRECISION,
+    const translateX = Math.round((anchorLeft - scaledBounds.centerX) * POSITION_PRECISION) / POSITION_PRECISION;
+    const translateY = Math.round((anchorTop - scaledBounds.centerY) * POSITION_PRECISION) / POSITION_PRECISION;
+    deckTransform = {
+      translateX,
+      translateY,
       anchorLeft,
       anchorTop
     };
-  }, [renderWidth, renderHeight, scaledBounds]);
+  }
 
-  const scaledCardDimensions = useMemo(() => {
-    return {
-      width: CARD_WIDTH * fitScale,
-      height: CARD_HEIGHT * fitScale
-    };
-  }, [fitScale]);
+  const scaledCardDimensions = {
+    width: CARD_WIDTH * fitScale,
+    height: CARD_HEIGHT * fitScale
+  };
 
   return {
     fitScale,
@@ -259,12 +233,28 @@ export function useDeckPositioning(
       layoutHeight,
       renderWidth,
       renderHeight,
-      innerWidth: dimensions.innerWidth,
-      innerHeight: dimensions.innerHeight,
-      effectiveInnerWidth: dimensions.effectiveInnerWidth,
-      effectiveInnerHeight: dimensions.effectiveInnerHeight,
+      innerWidth,
+      innerHeight,
+      effectiveInnerWidth,
+      effectiveInnerHeight,
       cardCount: deck.cards.length,
       layoutMode: deck.layoutMode
     }
   };
+}
+
+export function useDeckPositioning(
+  deck: DeckState,
+  basePositions: Record<string, CardLayout>,
+  layoutWidth: number,
+  layoutHeight: number,
+  renderWidth: number,
+  renderHeight: number,
+  debugLogs: boolean = false
+): DeckScene {
+  return useMemo(
+    () =>
+      computeDeckScene(deck, basePositions, layoutWidth, layoutHeight, renderWidth, renderHeight, debugLogs),
+    [deck, basePositions, layoutWidth, layoutHeight, renderWidth, renderHeight, debugLogs]
+  );
 }

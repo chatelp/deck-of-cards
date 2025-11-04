@@ -6,14 +6,18 @@ import {
   CardLayout,
   CardState,
   DeckState,
+  computeFanLayout,
+  computeLineLayout,
+  computeRingLayout,
+  computeStackLayout,
   resolveCardBackAsset,
   useDeck
 } from '@deck/core';
-import { CardView } from './CardView';
+import { CardView, CARD_WIDTH, CARD_HEIGHT } from './CardView';
 import { ReanimatedDriver } from './drivers/ReanimatedDriver';
 import { RN_DECK_VERSION } from './version';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
-import { useDeckPositioning, calculateLayoutParams } from './DeckPositioning';
+import { computeDeckScene, calculateLayoutParams, DeckScene } from './DeckPositioning';
 import { useOrientationManager } from './OrientationManager';
 
 /**
@@ -86,50 +90,53 @@ export const DeckView: React.FC<DeckViewProps> = ({
     if (containerSizeProp && containerSizeProp.width > 0 && containerSizeProp.height > 0) {
       return containerSizeProp;
     }
-    if (stableDimensions.width > 0 && stableDimensions.height > 0) {
+    if (isTransitioning) {
       return stableDimensions;
     }
     if (pendingDimensions && pendingDimensions.width > 0 && pendingDimensions.height > 0) {
       return pendingDimensions;
     }
     return stableDimensions;
-  }, [containerSizeProp, stableDimensions, pendingDimensions]);
+  }, [containerSizeProp, stableDimensions, pendingDimensions, isTransitioning]);
 
   const containerWidth = effectiveContainerSize.width;
   const containerHeight = effectiveContainerSize.height;
 
-  const measuredContainerSize = useMemo(
+  const normalizedEffectiveSize = useMemo(
     () => normalizeSize(effectiveContainerSize),
     [effectiveContainerSize.width, effectiveContainerSize.height]
   );
 
-  const [layoutContainerSize, setLayoutContainerSize] = useState<{ width: number; height: number }>(() => measuredContainerSize);
+  const [committedLayoutSize, setCommittedLayoutSize] = useState<{ width: number; height: number }>(() => normalizedEffectiveSize);
+  const [committedRenderSize, setCommittedRenderSize] = useState<{ width: number; height: number }>(() => normalizedEffectiveSize);
 
   useEffect(() => {
-    if (layoutContainerSize.width > 0 && layoutContainerSize.height > 0) {
+    if (committedLayoutSize.width > 0 && committedLayoutSize.height > 0) {
       return;
     }
-    if (measuredContainerSize.width <= 0 || measuredContainerSize.height <= 0) {
+    if (normalizedEffectiveSize.width <= 0 || normalizedEffectiveSize.height <= 0) {
       return;
     }
-    setLayoutContainerSize(measuredContainerSize);
-  }, [layoutContainerSize.width, layoutContainerSize.height, measuredContainerSize]);
+    setCommittedLayoutSize(normalizedEffectiveSize);
+    setCommittedRenderSize(normalizedEffectiveSize);
+  }, [committedLayoutSize.width, committedLayoutSize.height, normalizedEffectiveSize]);
 
   useEffect(() => {
     if (isTransitioning) {
       return;
     }
-    if (measuredContainerSize.width <= 0 || measuredContainerSize.height <= 0) {
+    if (normalizedEffectiveSize.width <= 0 || normalizedEffectiveSize.height <= 0) {
       return;
     }
-    setLayoutContainerSize((prev) => (sizesAreEqual(prev, measuredContainerSize) ? prev : measuredContainerSize));
-  }, [isTransitioning, measuredContainerSize, transitionId]);
+    setCommittedLayoutSize((prev) => (sizesAreEqual(prev, normalizedEffectiveSize) ? prev : normalizedEffectiveSize));
+    setCommittedRenderSize((prev) => (sizesAreEqual(prev, normalizedEffectiveSize) ? prev : normalizedEffectiveSize));
+  }, [isTransitioning, normalizedEffectiveSize, transitionId]);
 
   // Calculer les paramètres de layout ADAPTATIFS AVANT la création du deck
   // Cela permet au core de générer les positions avec les bons paramètres dès le départ
   const layoutParams = useMemo(() => {
-    return calculateLayoutParams(layoutContainerSize.width, layoutContainerSize.height, cards.length, debugLogs);
-  }, [layoutContainerSize.width, layoutContainerSize.height, cards.length, debugLogs]);
+    return calculateLayoutParams(committedLayoutSize.width, committedLayoutSize.height, cards.length, debugLogs);
+  }, [committedLayoutSize.width, committedLayoutSize.height, cards.length, debugLogs]);
 
   const animationDriver: AnimationDriver = useMemo(
     () => driver ?? new ReanimatedDriver(),
@@ -137,39 +144,135 @@ export const DeckView: React.FC<DeckViewProps> = ({
   );
 
   // Utiliser les paramètres adaptatifs calculés pour initialiser le deck
-  const deckHook = useDeck(cards, animationDriver, {
-    drawLimit,
-    defaultBackAsset,
-    ringRadius: layoutParams.ringRadius,
-    fanRadius: layoutParams.fanRadius,
-    fanAngle: layoutParams.fanSpread,
-    spacing: layoutParams.spacing // Pour le mode 'line'
-  });
-
-  const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;
-  const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
-  const lastFannedLengthRef = useRef<number | null>(null);
-
-  // Utiliser DeckPositioning pour toute la logique de positionnement
-  // NOTE: On doit recalculer les layoutParams après que le deck soit créé
-  // car le core a besoin des paramètres AVANT de générer les positions.
-  // On va utiliser les paramètres calculés par DeckPositioning pour mettre à jour le deck.
-  // Mais pour l'instant, on utilise les positions existantes pour le calcul du positionnement.
-  // Inclure layoutMode, dimensions et orientation dans le token
-  // Les dimensions sont critiques car les positions dépendent des dimensions du container
-  const positioning = useDeckPositioning(
-    deck,
-    layoutContainerSize.width,
-    layoutContainerSize.height,
-    containerWidth,
-    containerHeight,
-    debugLogs
+  const deckHook = useDeck(
+    cards,
+    animationDriver,
+    {
+      drawLimit,
+      defaultBackAsset,
+      ringRadius: layoutParams.ringRadius,
+      fanRadius: layoutParams.fanRadius,
+      fanAngle: layoutParams.fanSpread,
+      spacing: layoutParams.spacing // Pour le mode 'line'
+    },
+    {
+      animationsEnabled: !isTransitioning,
+      manageLayoutExternally: true
+    }
   );
 
-  const { scaledPositions, scaledCardDimensions, scaledBounds, deckTransform, fitScale } = positioning;
+  const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo, setPositions } = deckHook;
+  const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
+  const lastFannedLengthRef = useRef<number | null>(null);
+  const lastSyncedBasePositionsRef = useRef<string>('');
 
-  const hasValidContainer = containerWidth > 4 && containerHeight > 4;
+  const basePositions = useMemo(() => {
+    if (deck.cards.length === 0) {
+      return {} as Record<string, CardLayout>;
+    }
+
+    const deckForLayout: DeckState = {
+      ...deck,
+      config: {
+        ...deck.config,
+        fanRadius: layoutParams.fanRadius,
+        fanAngle: layoutParams.fanSpread,
+        ringRadius: layoutParams.ringRadius,
+        spacing: layoutParams.spacing
+      }
+    };
+
+    if (deck.layoutMode === 'ring') {
+      return computeRingLayout(deckForLayout, { radius: layoutParams.ringRadius });
+    }
+
+    if (deck.layoutMode === 'stack') {
+      return computeStackLayout(deckForLayout);
+    }
+
+    if (deck.layoutMode === 'line') {
+      return computeLineLayout(deckForLayout, layoutParams.spacing);
+    }
+
+    return computeFanLayout(deckForLayout, {
+      radius: layoutParams.fanRadius,
+      spreadAngle: layoutParams.fanSpread,
+      origin: layoutParams.fanOrigin
+    });
+  }, [deck, layoutParams]);
+
+  const basePositionsSignature = useMemo(() => {
+    return deck.cards
+      .map((card) => {
+        const layout = basePositions[card.id];
+        if (!layout) {
+          return `${card.id}:missing`;
+        }
+        return `${card.id}:${layout.x.toFixed(2)}:${layout.y.toFixed(2)}:${(layout.rotation ?? 0).toFixed(2)}:${(layout.scale ?? 1).toFixed(3)}`;
+      })
+      .join('|');
+  }, [deck.cards, basePositions]);
+
+  useEffect(() => {
+    if (deck.cards.length === 0) {
+      return;
+    }
+    if (basePositionsSignature === lastSyncedBasePositionsRef.current) {
+      return;
+    }
+    lastSyncedBasePositionsRef.current = basePositionsSignature;
+    void setPositions(basePositions);
+  }, [basePositions, basePositionsSignature, setPositions, deck.cards.length]);
+
+  const deckScene = useMemo(() => {
+    if (
+      committedLayoutSize.width <= 0 ||
+      committedLayoutSize.height <= 0 ||
+      committedRenderSize.width <= 0 ||
+      committedRenderSize.height <= 0
+    ) {
+      return null;
+    }
+    return computeDeckScene(
+      deck,
+      basePositions,
+      committedLayoutSize.width,
+      committedLayoutSize.height,
+      committedRenderSize.width,
+      committedRenderSize.height,
+      debugLogs
+    );
+  }, [
+    deck,
+    basePositions,
+    committedLayoutSize.width,
+    committedLayoutSize.height,
+    committedRenderSize.width,
+    committedRenderSize.height,
+    debugLogs
+  ]);
+
+  const hasValidContainer = committedRenderSize.width > 4 && committedRenderSize.height > 4;
   const isResizing = isTransitioning;
+  const fitScale = deckScene?.fitScale ?? 1;
+  const scaledPositions = deckScene?.scaledPositions ?? {};
+  const scaledCardDimensions = deckScene?.scaledCardDimensions ?? { width: CARD_WIDTH, height: CARD_HEIGHT };
+  const scaledBounds = deckScene?.scaledBounds ?? {
+    minX: 0,
+    maxX: 0,
+    minY: 0,
+    maxY: 0,
+    width: 0,
+    height: 0,
+    centerX: 0,
+    centerY: 0
+  };
+  const deckTransform = deckScene?.deckTransform ?? {
+    translateX: 0,
+    translateY: 0,
+    anchorLeft: committedRenderSize.width / 2,
+    anchorTop: committedRenderSize.height / 2
+  };
 
   const samplePositionsKey = useMemo(() => {
     return deck.cards.slice(0, 3)
@@ -189,10 +292,10 @@ export const DeckView: React.FC<DeckViewProps> = ({
       deck.cards.length,
       orientationInfo.type,
       transitionId,
-      layoutContainerSize.width.toFixed(1),
-      layoutContainerSize.height.toFixed(1),
-      containerWidth.toFixed(1),
-      containerHeight.toFixed(1),
+      committedLayoutSize.width.toFixed(1),
+      committedLayoutSize.height.toFixed(1),
+      committedRenderSize.width.toFixed(1),
+      committedRenderSize.height.toFixed(1),
       fitScale.toFixed(3),
       scaledBounds.width.toFixed(1),
       scaledBounds.height.toFixed(1),
@@ -205,10 +308,10 @@ export const DeckView: React.FC<DeckViewProps> = ({
     deck.cards.length,
     orientationInfo.type,
     transitionId,
-    layoutContainerSize.width,
-    layoutContainerSize.height,
-    containerWidth,
-    containerHeight,
+    committedLayoutSize.width,
+    committedLayoutSize.height,
+    committedRenderSize.width,
+    committedRenderSize.height,
     fitScale,
     scaledBounds,
     deckTransform,
@@ -236,8 +339,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
     if (!hasValidContainer) return;
     if (deck.cards.length === 0) return;
     if (isResizing) return;
+    if (!deckScene) return;
     
-    const containerKey = `${deck.layoutMode}|${orientationInfo.type}|${containerWidth.toFixed(1)}x${containerHeight.toFixed(1)}`;
+    const containerKey = `${deck.layoutMode}|${orientationInfo.type}|${committedRenderSize.width.toFixed(1)}x${committedRenderSize.height.toFixed(1)}`;
     const now = Date.now();
     const lastContainerLog = lastContainerLogRef.current[containerKey];
 
@@ -299,12 +403,12 @@ export const DeckView: React.FC<DeckViewProps> = ({
       console.log('[DeckView] 📊 LOG CONDENSÉ - Deck affiché', {
         layout: {
           size: {
-            w: layoutContainerSize.width.toFixed(0),
-            h: layoutContainerSize.height.toFixed(0)
+            w: committedLayoutSize.width.toFixed(0),
+            h: committedLayoutSize.height.toFixed(0)
           }
         },
         container: {
-          size: { w: containerWidth.toFixed(0), h: containerHeight.toFixed(0) },
+          size: { w: committedRenderSize.width.toFixed(0), h: committedRenderSize.height.toFixed(0) },
           center: { x: deckTransform.anchorLeft.toFixed(0), y: deckTransform.anchorTop.toFixed(0) }
         },
         deck: {
@@ -354,14 +458,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
     deck.layoutMode,
     deck.cards.length,
     hasValidContainer,
-    containerWidth,
-    containerHeight,
-    layoutContainerSize.width,
-    layoutContainerSize.height,
+    committedRenderSize.width,
+    committedRenderSize.height,
+    committedLayoutSize.width,
+    committedLayoutSize.height,
     logStateKey,
     fitScale,
     scaledPositions,
     scaledCardDimensions,
+    deckScene,
     scaledBounds,
     deckTransform,
     isResizing,
@@ -442,7 +547,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     // Logs individuels désactivés - log condensé dans useEffect
     
     return style;
-  }, [deckTransform, deck.layoutMode, debugLogs, positioning, containerWidth, containerHeight]);
+  }, [deckTransform]);
 
   // Handle container layout
   const handleLayout = useCallback(
@@ -529,31 +634,37 @@ export const DeckView: React.FC<DeckViewProps> = ({
         >
           {/* Wrapper des cartes avec transform pour centrer le deck */}
           <View style={hasValidContainer ? deckContentTransformStyle : undefined}>
-            {deck.cards.map((card) => (
-              <CardView
-                key={card.id}
-                state={card}
-                layout={scaledPositions[card.id] as CardLayout}
-                isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-                driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
-                cardDimensions={scaledCardDimensions}
-                isResizing={isResizing}
-                onFlip={async () => {
-                  await flip(card.id);
-                  onFlipCard?.(card.id, !card.faceUp);
-                }}
-                onSelect={async () => {
-                  const drawn = await drawCard(card.id);
-                  if (drawn) {
-                    onSelectCard?.(card.id, true);
-                    onDrawCard?.(drawn as CardState);
-                  }
-                }}
-                renderFace={renderCardFace}
-                renderBack={effectiveRenderBack}
-                debugLogs={debugLogs}
-              />
-            ))}
+            {deck.cards.map((card) => {
+              const layout = scaledPositions[card.id];
+              if (!layout) {
+                return null;
+              }
+              return (
+                <CardView
+                  key={card.id}
+                  state={card}
+                  layout={layout}
+                  isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+                  driver={animationDriver instanceof ReanimatedDriver ? animationDriver : undefined}
+                  cardDimensions={scaledCardDimensions}
+                  isResizing={isResizing}
+                  onFlip={async () => {
+                    await flip(card.id);
+                    onFlipCard?.(card.id, !card.faceUp);
+                  }}
+                  onSelect={async () => {
+                    const drawn = await drawCard(card.id);
+                    if (drawn) {
+                      onSelectCard?.(card.id, true);
+                      onDrawCard?.(drawn as CardState);
+                    }
+                  }}
+                  renderFace={renderCardFace}
+                  renderBack={effectiveRenderBack}
+                  debugLogs={debugLogs}
+                />
+              );
+            })}
           </View>
         </View>
       </View>
