@@ -170,6 +170,17 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const [prefetchedBackAssets, setPrefetchedBackAssets] = useState<Record<string, boolean>>({});
   const lastFannedLengthRef = useRef<number | null>(null);
   const lastSyncedBasePositionsRef = useRef<string>('');
+  const lastAppliedLayoutSignatureRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!layoutModeProp) {
+      return;
+    }
+    if (deck.layoutMode === layoutModeProp) {
+      return;
+    }
+    void setLayoutMode(layoutModeProp);
+  }, [layoutModeProp, deck.layoutMode, setLayoutMode]);
 
   const effectiveLayoutMode = layoutModeProp ?? deck.layoutMode;
 
@@ -254,6 +265,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   const fanWithAnimation = useCallback(
     async (options?: FanOptions) => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
       const sequence = await fan({
         ...options,
         radius: layoutParams.fanRadius,
@@ -262,47 +276,62 @@ export const DeckView: React.FC<DeckViewProps> = ({
       });
       return playSequence(sequence);
     },
-    [fan, layoutParams.fanRadius, layoutParams.fanSpread, layoutParams.fanOrigin, playSequence]
+    [fan, layoutParams.fanRadius, layoutParams.fanSpread, layoutParams.fanOrigin, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
   const ringWithAnimation = useCallback(
     async (options?: RingOptions) => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
       const sequence = await ring({
         radius: layoutParams.ringRadius,
         ...options
       });
       return playSequence(sequence);
     },
-    [ring, layoutParams.ringRadius, playSequence]
+    [ring, layoutParams.ringRadius, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
   const stackWithAnimation = useCallback(async () => {
+    if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+      return undefined;
+    }
     const sequence = await resetStack();
     return playSequence(sequence);
-  }, [resetStack, playSequence]);
+  }, [resetStack, playSequence, committedLayoutSize.width, committedLayoutSize.height]);
 
   const shuffleWithAnimation = useCallback(
     async (options?: ShuffleOptions) => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
       const sequence = await shuffle(options);
       return playSequence(sequence);
     },
-    [shuffle, playSequence]
+    [shuffle, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
   const flipWithAnimation = useCallback(
     async (cardId: string) => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
       const sequence = await flip(cardId);
       return playSequence(sequence);
     },
-    [flip, playSequence]
+    [flip, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
   const animateToWithAnimation = useCallback(
     async (cardId: string, target: CardAnimationTarget) => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
       const sequence = await animateTo(cardId, target);
       return playSequence(sequence);
     },
-    [animateTo, playSequence]
+    [animateTo, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
   useEffect(() => {
@@ -312,6 +341,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
     if (deck.layoutMode === layoutModeProp) {
       return;
     }
+    if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+      return;
+    }
     if (layoutModeProp === 'ring') {
       void ringWithAnimation();
     } else if (layoutModeProp === 'stack') {
@@ -319,7 +351,44 @@ export const DeckView: React.FC<DeckViewProps> = ({
     } else {
       void fanWithAnimation();
     }
-  }, [layoutModeProp, deck.layoutMode, fanWithAnimation, ringWithAnimation, stackWithAnimation]);
+  }, [
+    layoutModeProp,
+    deck.layoutMode,
+    fanWithAnimation,
+    ringWithAnimation,
+    stackWithAnimation,
+    committedLayoutSize.width,
+    committedLayoutSize.height
+  ]);
+
+  useEffect(() => {
+    if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+      return;
+    }
+    if (deck.cards.length === 0) {
+      return;
+    }
+    const signature = `${effectiveLayoutMode}:${committedLayoutSize.width.toFixed(1)}x${committedLayoutSize.height.toFixed(1)}:${deck.cards.length}`;
+    if (lastAppliedLayoutSignatureRef.current === signature) {
+      return;
+    }
+    lastAppliedLayoutSignatureRef.current = signature;
+    if (effectiveLayoutMode === 'ring') {
+      void ringWithAnimation();
+    } else if (effectiveLayoutMode === 'stack') {
+      void stackWithAnimation();
+    } else {
+      void fanWithAnimation();
+    }
+  }, [
+    effectiveLayoutMode,
+    committedLayoutSize.width,
+    committedLayoutSize.height,
+    deck.cards.length,
+    fanWithAnimation,
+    ringWithAnimation,
+    stackWithAnimation
+  ]);
 
   const deckScene = useMemo(() => {
     if (

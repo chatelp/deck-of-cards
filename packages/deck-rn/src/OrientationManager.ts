@@ -194,7 +194,3 @@ export function useOrientationManager(config: OrientationManagerConfig = {}): Or
     [orientation, stableDimensions, pendingDimensions, isTransitioning, transitionId, observe]
   );
 }
-
-
-
-
