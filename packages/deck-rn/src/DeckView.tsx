@@ -334,6 +334,21 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [animateTo, playSequence, committedLayoutSize.width, committedLayoutSize.height]
   );
 
+  const drawCardWithAnimation = useCallback(
+    async (cardId: string): Promise<CardState | undefined> => {
+      if (committedLayoutSize.width <= 0 || committedLayoutSize.height <= 0) {
+        return undefined;
+      }
+      const result = await drawCard(cardId);
+      if (!result) {
+        return undefined;
+      }
+      await playSequence(result.sequence);
+      return result.card;
+    },
+    [drawCard, playSequence, committedLayoutSize.width, committedLayoutSize.height]
+  );
+
   useEffect(() => {
     if (!layoutModeProp) {
       return;
@@ -685,7 +700,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
         flip: flipWithAnimation,
         animateTo: animateToWithAnimation,
         selectCard,
-        drawCard,
+        drawCard: drawCardWithAnimation,
         resetStack: stackWithAnimation,
         setLayoutMode
       });
@@ -698,7 +713,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     flipWithAnimation,
     animateToWithAnimation,
     selectCard,
-    drawCard,
+    drawCardWithAnimation,
     stackWithAnimation,
     setLayoutMode
   ]);
@@ -828,7 +843,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
                     onFlipCard?.(card.id, !card.faceUp);
                   }}
                   onSelect={async () => {
-                    const drawn = await drawCard(card.id);
+                    const drawn = await drawCardWithAnimation(card.id);
                     if (drawn) {
                       onSelectCard?.(card.id, true);
                       onDrawCard?.(drawn as CardState);

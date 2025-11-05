@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import {
   AnimationDriver,
+  AnimationSequence,
   CardData,
   CardId,
   CardState,
@@ -202,7 +203,7 @@ export function useDeck(
   );
 
   const drawCard = useCallback(
-    async (cardId: CardId): Promise<CardState | undefined> => {
+    async (cardId: CardId): Promise<{ card: CardState; sequence?: AnimationSequence } | undefined> => {
       const cardIndex = deck.cards.findIndex((card) => card.id === cardId);
       if (cardIndex === -1) {
         console.warn('[useDeck] drawCard:missing-card', { cardId });
@@ -245,13 +246,9 @@ export function useDeck(
         layoutResult = fan(baseDeck);
       }
       const { deck: nextDeck, sequence } = layoutResult;
-      try {
-        await applySequence(nextDeck, sequence);
-      } catch (error) {
-        console.error('[useDeck] drawCard animation error', error);
-      }
+      const result = await applySequence(nextDeck, sequence);
       observable.emit({ type: 'draw', payload: { cardId, card: drawnCard } });
-      return drawnCard;
+      return { card: drawnCard, sequence: result };
     },
     [deck, applySequence]
   );
