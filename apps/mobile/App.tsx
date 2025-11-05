@@ -228,12 +228,16 @@ type DeckLayoutMode = 'fan' | 'ring' | 'stack';
 
 function MainDeckScreen() {
   const deckActions = useRef<DeckViewActions | null>(null);
+  const initialLayoutAppliedRef = useRef<string | null>(null);
+  const [actionsReadyVersion, setActionsReadyVersion] = useState(0);
+
   const [cardsSeed, setCardsSeed] = useState<number>(() => Date.now());
   const [drawLimit, setDrawLimit] = useState<number>(2);
   const [deckSize, setDeckSize] = useState<number>(10);
   const [cardBackOption, setCardBackOption] = useState<CardBackOptionId>('light');
   const [restoreLayoutAfterShuffle, setRestoreLayoutAfterShuffle] = useState<boolean>(true);
-  const [desiredLayout, setDesiredLayout] = useState<DeckLayoutMode>('fan');
+  const [layoutMode, setLayoutMode] = useState<DeckLayoutMode>('fan');
+  const [currentLayout, setCurrentLayout] = useState<DeckLayoutMode>('fan');
   const [drawnCards, setDrawnCards] = useState<CardState[]>([]);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -257,6 +261,13 @@ function MainDeckScreen() {
   const selectedCard = drawnCards.find((card) => card.id === selectedCardId) ?? null;
   const deckKey = useMemo(() => `${deckSize}-${cardsSeed}-${cardBackOption}`, [deckSize, cardsSeed, cardBackOption]);
 
+  useEffect(() => {
+    setDrawnCards([]);
+    setFaceUp({});
+    setSelectedCardId(null);
+    initialLayoutAppliedRef.current = null;
+  }, [deckKey]);
+
   const handleDeckContainerLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setDeckContainerSize((prev) => {
@@ -272,22 +283,22 @@ function MainDeckScreen() {
     if (!actions) {
       return;
     }
-    await actions.shuffle({ restoreLayout: restoreLayoutAfterShuffle });
+    await actions.shuffle({ restoreLayout: restoreLayoutAfterShuffle, restoreLayoutMode: layoutMode });
     if (!restoreLayoutAfterShuffle) {
-      setDesiredLayout('stack');
+      setLayoutMode('stack');
     }
-  }, [restoreLayoutAfterShuffle]);
+  }, [restoreLayoutAfterShuffle, layoutMode]);
 
   const handleFan = useCallback(() => {
-    setDesiredLayout('fan');
+    setLayoutMode('fan');
   }, []);
 
   const handleRing = useCallback(() => {
-    setDesiredLayout('ring');
+    setLayoutMode('ring');
   }, []);
 
   const handleStack = useCallback(() => {
-    setDesiredLayout('stack');
+    setLayoutMode('stack');
   }, []);
 
   const handleRestart = useCallback(() => {
@@ -296,6 +307,8 @@ function MainDeckScreen() {
     setDrawnCards([]);
     setFaceUp({});
     setSelectedCardId(null);
+    setLayoutMode('fan');
+    initialLayoutAppliedRef.current = null;
   }, []);
 
   const handleDeckStateChange = useCallback(
@@ -310,6 +323,10 @@ function MainDeckScreen() {
       });
       setFaceUp(nextFaceUp);
 
+      if (state.layoutMode === 'fan' || state.layoutMode === 'ring' || state.layoutMode === 'stack') {
+        setCurrentLayout(state.layoutMode);
+      }
+
       if (selectedCardId && !state.drawnCards.some((card) => card.id === selectedCardId)) {
         setSelectedCardId(null);
       }
@@ -317,25 +334,20 @@ function MainDeckScreen() {
     [selectedCardId]
   );
 
-  const handleDeckSizeChange = useCallback(
-    (nextSize: number) => {
-      setDeckSize(nextSize);
-      setDrawnCards([]);
-      setFaceUp({});
-      setSelectedCardId(null);
-    },
-    []
-  );
+  const handleDeckSizeChange = useCallback((nextSize: number) => {
+    setDeckSize(nextSize);
+    setDrawnCards([]);
+    setFaceUp({});
+    setSelectedCardId(null);
+    initialLayoutAppliedRef.current = null;
+  }, []);
 
-  const handleDrawLimitChange = useCallback(
-    (nextLimit: number) => {
-      setDrawLimit(nextLimit);
-      setDrawnCards([]);
-      setFaceUp({});
-      setSelectedCardId(null);
-    },
-    []
-  );
+  const handleDrawLimitChange = useCallback((nextLimit: number) => {
+    setDrawLimit(nextLimit);
+    setDrawnCards([]);
+    setFaceUp({});
+    setSelectedCardId(null);
+  }, []);
 
   const handleSelectCard = useCallback((cardId: string, selected: boolean) => {
     setSelectedCardId(selected ? cardId : null);
@@ -358,6 +370,43 @@ function MainDeckScreen() {
   const handleCardBackChange = useCallback((optionId: CardBackOptionId) => {
     setCardBackOption(optionId);
   }, []);
+
+  useEffect(() => {
+    const actions = deckActions.current;
+    if (!actions) {
+      return;
+    }
+    actions.setLayoutMode?.(layoutMode);
+    if (layoutMode === 'ring') {
+      void actions.ring?.();
+    } else if (layoutMode === 'stack') {
+      void actions.resetStack?.();
+    } else {
+      void actions.fan?.();
+    }
+  }, [layoutMode, actionsReadyVersion]);
+
+  useEffect(() => {
+    const actions = deckActions.current;
+    if (!actions) {
+      return;
+    }
+    if (deckContainerSize.width <= 0 || deckContainerSize.height <= 0) {
+      return;
+    }
+    if (initialLayoutAppliedRef.current === deckKey) {
+      return;
+    }
+    initialLayoutAppliedRef.current = deckKey;
+    actions.setLayoutMode?.(layoutMode);
+    if (layoutMode === 'ring') {
+      void actions.ring?.();
+    } else if (layoutMode === 'stack') {
+      void actions.resetStack?.();
+    } else {
+      void actions.fan?.();
+    }
+  }, [deckKey, deckContainerSize.width, deckContainerSize.height, layoutMode, actionsReadyVersion]);
 
   return (
     <View style={mainStyles.screen}>
@@ -384,10 +433,11 @@ function MainDeckScreen() {
                 drawLimit={drawLimit}
                 defaultBackAsset={defaultBackAsset}
                 containerSize={deckContainerSize}
-                layoutMode={desiredLayout}
+                layoutMode={layoutMode}
                 debugLogs={__DEV__}
                 onDeckReady={(actions) => {
                   deckActions.current = actions;
+                  setActionsReadyVersion((version) => version + 1);
                 }}
                 onDeckStateChange={handleDeckStateChange}
                 onFlipCard={handleFlipCard}
@@ -434,9 +484,9 @@ function MainDeckScreen() {
         <View style={mainStyles.controlsSection}>
           <View style={mainStyles.buttonRow}>
             <ActionButton label="Shuffle" onPress={handleShuffle} />
-            <ActionButton label="Fan" onPress={handleFan} active={desiredLayout === 'fan'} />
-            <ActionButton label="Ring" onPress={handleRing} active={desiredLayout === 'ring'} />
-            <ActionButton label="Stack" onPress={handleStack} active={desiredLayout === 'stack'} />
+            <ActionButton label="Fan" onPress={handleFan} active={currentLayout === 'fan'} />
+            <ActionButton label="Ring" onPress={handleRing} active={currentLayout === 'ring'} />
+            <ActionButton label="Stack" onPress={handleStack} active={currentLayout === 'stack'} />
           </View>
           <View style={mainStyles.singleButtonRow}>
             <ActionButton label="Restart" onPress={handleRestart} />
