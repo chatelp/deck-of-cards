@@ -6,6 +6,7 @@ npm-debug.log*
 # Next.js outputs
 apps/web/.next/
 apps/web/out/
+apps/web/apps/
 
 # Package build outputs
 packages/*/dist/
