@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "Node",
+    "paths": {
+      "@deck/core": ["../deck-core/dist/index.d.ts"],
+      "@deck/core/*": ["../deck-core/dist/*"]
+    }
+  }
+}
