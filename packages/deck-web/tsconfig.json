@@ -10,5 +10,5 @@
     "skipLibCheck": true
   },
   "include": ["src"],
-  "references": [{ "path": "../deck-core", "prepend": true }]
+  "references": [{ "path": "../deck-core" }]
 }
