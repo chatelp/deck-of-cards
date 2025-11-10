@@ -21,6 +21,9 @@
   "dependencies": {
     "@deck/core": "workspace:*"
   },
+  "devDependencies": {
+    "framer-motion": "^11.0.0"
+  },
   "scripts": {
     "dev": "tsc -b tsconfig.json --watch --preserveWatchOutput",
     "build": "tsc -b tsconfig.json",
