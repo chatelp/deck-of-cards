@@ -7,13 +7,8 @@
     "declarationMap": true,
     "composite": true,
     "types": ["react"],
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@deck/core": ["../deck-core/src/index.ts"],
-      "@deck/core/*": ["../deck-core/src/*"]
-    }
+    "skipLibCheck": true
   },
   "include": ["src"],
-  "references": [{ "path": "../deck-core" }]
+  "references": [{ "path": "../deck-core", "prepend": true }]
 }
