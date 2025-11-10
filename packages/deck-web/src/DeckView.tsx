@@ -83,7 +83,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   useEffect(() => {
     const assetsToLoad = new Set<string>();
-    deck.cards.forEach((card) => {
+    deck.cards.forEach((card: CardState) => {
       const asset = resolveCardBackAsset(card, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
       if (typeof asset === 'string' && asset && loadedBackAssets[asset] !== true) {
         assetsToLoad.add(asset);
@@ -252,7 +252,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   return (
     <div ref={containerRef} className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div style={canvasStyle}>
-        {deck.cards.map((card) => {
+        {deck.cards.map((card: CardState) => {
           const cardLayout = layout[card.id] as CardLayout | undefined;
           if (!cardLayout) {
             return null;
