@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "pnpm build",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=deck-web-app...",
   "installCommand": "pnpm install",
   "framework": "nextjs"
 }
