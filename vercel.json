@@ -1,12 +1,13 @@
 {
   "version": 2,
   "builds": [
-    { "src": "apps/web/next.config.js", "use": "@vercel/next" }
+    { "src": "apps/web/package.json", "use": "@vercel/next" }
   ],
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter @deck/core run build && pnpm --filter @deck/web run build",
-  "rewrites": [
-    { "source": "/_next/(.*)", "destination": "/apps/web/_next/$1" },
-    { "source": "/(.*)", "destination": "/apps/web/$1" }
+  "routes": [
+    { "src": "/_next/(.*)", "dest": "/apps/web/_next/$1", "headers": { "x-matched-path": "/_next/$1" }, "check": true },
+    { "src": "/", "dest": "/apps/web", "headers": { "x-matched-path": "/" } },
+    { "src": "/(.*)", "dest": "/apps/web/$1", "headers": { "x-matched-path": "/$1" } }
   ]
 }
