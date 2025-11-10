@@ -36,7 +36,7 @@ export class WebMotionDriver implements AnimationDriver {
     }
 
     const isFlip = sequence.meta?.type === 'flip';
-    const animations = sequence.steps.map((step) => {
+    const animations = sequence.steps.map((step: AnimationSequence['steps'][number]) => {
       const entry = this.cards.get(step.cardId);
       if (!entry) {
         return Promise.resolve();

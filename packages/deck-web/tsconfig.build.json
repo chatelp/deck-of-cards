@@ -2,6 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "moduleResolution": "Node",
+    "baseUrl": ".",
     "paths": {
       "@deck/core": ["../deck-core/dist/index.d.ts"],
       "@deck/core/*": ["../deck-core/dist/*"]
