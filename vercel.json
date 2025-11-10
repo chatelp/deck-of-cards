@@ -3,6 +3,10 @@
   "builds": [
     { "src": "apps/web/next.config.js", "use": "@vercel/next" }
   ],
+  "routes": [
+    { "src": "/_next/static/(.*)", "dest": "apps/web/_next/static/$1" },
+    { "src": "/(.*)", "dest": "apps/web/$1" }
+  ],
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter @deck/core build && pnpm --filter @deck/web build"
 }
