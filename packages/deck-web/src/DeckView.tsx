@@ -6,7 +6,8 @@ import {
   DeckState,
   calculateDeckBounds,
   resolveCardBackAsset,
-  useDeck
+  useDeck,
+  computeFanLayout
 } from '@deck/core';
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
@@ -62,9 +63,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
 
   useEffect(() => {
     if (onDeckReady) {
-      const wrappedAnimateTo = async (cardId: string, target: CardAnimationTarget) => {
-        await animateTo(cardId, target);
-      };
+      const wrappedAnimateTo = async (cardId: string, target: CardAnimationTarget) => animateTo(cardId, target);
       onDeckReady({
         fan,
         ring,
@@ -167,13 +166,27 @@ export const DeckView: React.FC<DeckViewProps> = ({
     };
   }, []);
 
+  const fallbackFanPositions = useMemo(() => {
+    if (deck.cards.length === 0) {
+      return {};
+    }
+    return computeFanLayout(deck);
+  }, [deck]);
+
+  const effectivePositions = useMemo(() => {
+    if (Object.keys(deck.positions).length > 0) {
+      return deck.positions;
+    }
+    return fallbackFanPositions;
+  }, [deck.positions, fallbackFanPositions]);
+
   const deckBounds = useMemo(
     () =>
-      calculateDeckBounds(deck.cards, deck.positions, {
+      calculateDeckBounds(deck.cards, effectivePositions, {
         width: CARD_WIDTH,
         height: CARD_HEIGHT
       }),
-    [deck.cards, deck.positions]
+    [deck.cards, effectivePositions]
   );
 
   const deckTransform = useMemo(() => {
@@ -218,7 +231,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
     };
   }, [deckTransform]);
 
-  const layout: DeckState['positions'] = deck.positions;
+  const layout: DeckState['positions'] = effectivePositions;
   const fallbackRenderBack = useCallback(
     ({ state, data }: CardRenderProps) => {
       const asset = resolveCardBackAsset(state, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
@@ -239,39 +252,45 @@ export const DeckView: React.FC<DeckViewProps> = ({
   return (
     <div ref={containerRef} className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div style={canvasStyle}>
-        {deck.cards.map((card) => (
-          <CardView
-            key={card.id}
-            state={card}
-            layout={layout[card.id] as CardLayout}
-            isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-            driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
-            onFlip={async () => {
-              const willBeFaceUp = !card.faceUp;
-              try {
-                await flip(card.id);
-                onFlipCard?.(card.id, willBeFaceUp);
-              } catch (error) {
-                console.error('[DeckView] flip error', error);
-                throw error;
-              }
-            }}
-            onSelect={async () => {
-              try {
-                const drawn = await drawCard(card.id);
-                if (drawn) {
-                  onSelectCard?.(card.id, true);
-                  onDrawCard?.(drawn as CardState);
+        {deck.cards.map((card) => {
+          const cardLayout = layout[card.id] as CardLayout | undefined;
+          if (!cardLayout) {
+            return null;
+          }
+          return (
+            <CardView
+              key={card.id}
+              state={card}
+              layout={cardLayout}
+              isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
+              driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
+              onFlip={async () => {
+                const willBeFaceUp = !card.faceUp;
+                try {
+                  await flip(card.id);
+                  onFlipCard?.(card.id, willBeFaceUp);
+                } catch (error) {
+                  console.error('[DeckView] flip error', error);
+                  throw error;
                 }
-              } catch (error) {
-                console.error('[DeckView] draw error', error);
-                throw error;
-              }
-            }}
-            renderFace={renderCardFace}
-            renderBack={effectiveRenderBack}
-          />
-        ))}
+              }}
+              onSelect={async () => {
+                try {
+                  const drawn = await drawCard(card.id);
+                  if (drawn?.card) {
+                    onSelectCard?.(card.id, true);
+                    onDrawCard?.(drawn.card);
+                  }
+                } catch (error) {
+                  console.error('[DeckView] draw error', error);
+                  throw error;
+                }
+              }}
+              renderFace={renderCardFace}
+              renderBack={effectiveRenderBack}
+            />
+          );
+        })}
       </div>
     </div>
   );
