@@ -32,23 +32,12 @@ export function createDeckState(cards: CardData[], config: DeckStateConfig = {})
     data: card
   }));
 
-  const positions: Record<CardId, CardLayout> = {};
-  cardStates.forEach((card, index) => {
-    positions[card.id] = {
-      x: 0,
-      y: 0,
-      rotation: 0,
-      scale: 1,
-      zIndex: index
-    };
-  });
-
   return {
     cards: cardStates,
     drawnCards: [],
-    positions,
+    positions: {},
     config: mergedConfig,
-    layoutMode: 'stack'
+    layoutMode: 'none'
   };
 }
 

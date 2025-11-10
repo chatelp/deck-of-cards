@@ -60,12 +60,13 @@ export function stack(deck: DeckState): { deck: DeckState; sequence: AnimationSe
 
 export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: DeckState; sequence: AnimationSequence } {
   const originalLayout = deck.layoutMode;
+  const normalizedOriginalLayout = originalLayout === 'none' ? 'stack' : originalLayout;
   const cards = shuffleArray(deck.cards, options.seed, options.iterations);
   const stackLayouts = computeStackLayout({ ...deck, cards });
 
   const shouldRestore = options.restoreLayout ?? true;
-  const targetLayout: typeof originalLayout = shouldRestore
-    ? options.restoreLayoutMode ?? originalLayout
+  const targetLayout: DeckLayoutMode = shouldRestore
+    ? options.restoreLayoutMode ?? normalizedOriginalLayout
     : 'stack';
 
   const finalLayouts = targetLayout === 'fan'

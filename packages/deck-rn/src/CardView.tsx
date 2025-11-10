@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CardViewProps } from './types';
@@ -77,7 +77,7 @@ export const CardView: React.FC<CardViewProps> = ({
     rotateY.value = withTiming(state.faceUp ? 180 : 0, { duration: 300 });
   }, [state.faceUp, rotateY, driver]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (driver instanceof ReanimatedDriver) {
       driver.register(state.id, {
         translateX,
@@ -94,7 +94,7 @@ export const CardView: React.FC<CardViewProps> = ({
       };
     }
     return undefined;
-  }, [driver, state.id, translateX, translateY, rotation, scale, rotateY, zIndex, state.faceUp]);
+  }, [driver, state.id, translateX, translateY, rotation, scale, rotateY, zIndex, state.faceUp, cardWidth, cardHeight]);
 
   const invokeAsync = useCallback((fn?: () => void | Promise<void>) => {
     if (!fn) {

@@ -51,7 +51,7 @@ export interface DeckStateConfig {
   ringRadius?: number;
 }
 
-export type DeckLayoutMode = 'stack' | 'fan' | 'line' | 'ring' | 'custom';
+export type DeckLayoutMode = 'none' | 'stack' | 'fan' | 'line' | 'ring' | 'custom';
 
 export interface ResolvedDeckStateConfig {
   fanAngle: number;

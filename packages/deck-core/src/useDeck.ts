@@ -269,6 +269,16 @@ export function useDeck(
     [deck]
   );
 
+  const setLayoutModeAndPositions = useCallback(
+    async (layoutMode: DeckState['layoutMode'], positions: DeckState['positions']) => {
+      const nextDeckWithMode = setDeckLayoutMode(deck, layoutMode);
+      const nextDeck = setDeckPositions(nextDeckWithMode, positions);
+      dispatch({ type: 'SET_STATE', payload: nextDeck });
+      return nextDeck;
+    },
+    [deck]
+  );
+
   const setLayoutMode = useCallback(
     async (layoutMode: DeckState['layoutMode']) => {
       if (deck.layoutMode === layoutMode) {
@@ -297,6 +307,7 @@ export function useDeck(
     setLayout,
     resetStack,
     setPositions,
+    setLayoutModeAndPositions,
     setLayoutMode,
     on
   };
