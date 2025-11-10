@@ -3,6 +3,10 @@
   "builds": [
     { "src": "apps/web/next.config.js", "use": "@vercel/next" }
   ],
+  "rewrites": [
+    { "source": "/_next/(.*)", "destination": "/apps/web/_next/$1" },
+    { "source": "/(.*)", "destination": "/apps/web/$1" }
+  ],
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter @deck/core build && pnpm --filter @deck/web build"
 }
