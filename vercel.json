@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd ../.. && pnpm --filter @deck/core build && pnpm --filter @deck/web build && pnpm --filter deck-web-app build && if [ -n \"$VERCEL\" ]; then ln -sfn .. apps/web/apps; fi",
+  "buildCommand": "cd ../.. && pnpm --filter @deck/core build && pnpm --filter @deck/web build && pnpm --filter deck-web-app build && if [ -n \"$VERCEL\" ]; then ln -sfn .. apps/web/apps && rm -rf apps/web/node_modules && ln -sfn ../../node_modules apps/web/node_modules; fi",
   "installCommand": "pnpm install",
   "framework": "nextjs"
 }
