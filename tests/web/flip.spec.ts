@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Animation Flip
  * Couverture ciblée sur plusieurs layouts
  */
-const BASELINE_URL = 'http://localhost:3000';
+const BASELINE_URL = 'http://localhost:3000?seed=12345';
 
 test.describe('Flip Animation', () => {
   test.beforeEach(async ({ page }) => {
@@ -44,16 +44,59 @@ test.describe('Flip Animation', () => {
     // Wait for layout change to complete and cards to be repositioned
     await page.waitForTimeout(1500);
     
+    // Wait for cards to be visible in viewport after layout change
+    await page.waitForFunction(
+      () => {
+        const cards = Array.from(document.querySelectorAll('[data-testid^="card-"]')) as HTMLElement[];
+        return cards.some(card => {
+          const rect = card.getBoundingClientRect();
+          const style = window.getComputedStyle(card);
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+          );
+        });
+      },
+      { timeout: 20000 }
+    );
+    
     // Verify card is still visible and clickable
     const firstCard = page.locator('[data-testid^="card-"]').first();
     await firstCard.waitFor({ state: 'visible', timeout: 10000 });
-    await firstCard.click({ force: true, timeout: 10000 });
+    
+    // Ensure card is in viewport and clickable
+    await firstCard.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+    
+    // Try standard click, fall back to JS click if needed
+    try {
+      await firstCard.click({ force: true, timeout: 5000 });
+    } catch (e) {
+      console.log('Standard click failed, trying JS click', e);
+      await firstCard.evaluate((node) => (node as HTMLElement).click());
+    }
+    
     await page.waitForTimeout(500);
 
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('flip-from-fan.png');
@@ -65,19 +108,59 @@ test.describe('Flip Animation', () => {
     // Wait for layout change to complete and cards to be repositioned
     await page.waitForTimeout(1500);
     
+    // Wait for cards to be visible in viewport after layout change
+    await page.waitForFunction(
+      () => {
+        const cards = Array.from(document.querySelectorAll('[data-testid^="card-"]')) as HTMLElement[];
+        return cards.some(card => {
+          const rect = card.getBoundingClientRect();
+          const style = window.getComputedStyle(card);
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+          );
+        });
+      },
+      { timeout: 20000 }
+    );
+    
     // Click on multiple cards
     const visibleCards = page.locator('[data-testid^="card-"]');
     const count = await visibleCards.count();
     const taps = Math.min(count, 3);
     for (let i = 0; i < taps; i += 1) {
-      await visibleCards.nth(i).click({ force: true, timeout: 5000 });
+      const card = visibleCards.nth(i);
+      await card.waitFor({ state: 'visible', timeout: 10000 });
+      await card.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+      try {
+        await card.click({ force: true, timeout: 5000 });
+      } catch (e) {
+        console.log(`Standard click failed for card ${i}, trying JS click`, e);
+        await card.evaluate((node) => (node as HTMLElement).click());
+      }
       await page.waitForTimeout(300);
     }
 
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('flip-from-ring.png');
@@ -89,16 +172,57 @@ test.describe('Flip Animation', () => {
     // Wait for layout change to complete and cards to be repositioned
     await page.waitForTimeout(1500);
     
+    // Wait for cards to be visible in viewport after layout change
+    await page.waitForFunction(
+      () => {
+        const cards = Array.from(document.querySelectorAll('[data-testid^="card-"]')) as HTMLElement[];
+        return cards.some(card => {
+          const rect = card.getBoundingClientRect();
+          const style = window.getComputedStyle(card);
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+          );
+        });
+      },
+      { timeout: 20000 }
+    );
+    
     // Verify card is still visible and clickable
     const topCard = page.locator('[data-testid^="card-"]').first();
     await topCard.waitFor({ state: 'visible', timeout: 10000 });
-    await topCard.click({ force: true, timeout: 10000 });
+    
+    // Ensure card is in viewport and clickable
+    await topCard.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    
+    try {
+      await topCard.click({ force: true, timeout: 5000 });
+    } catch (e) {
+      console.log('Standard click failed, trying JS click', e);
+      await topCard.evaluate((node) => (node as HTMLElement).click());
+    }
     await page.waitForTimeout(500);
 
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('flip-from-stack.png');

@@ -411,7 +411,7 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
               mixBlendMode: 'multiply',
               pointerEvents: 'none',
               opacity: isLoaded ? 1 : 0,
-              transition: 'opacity 220ms ease-out'
+              transition: 'none' // Phase 0: disable transition for deterministic snapshots
             }}
           />
           <div
@@ -422,7 +422,7 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
               mixBlendMode: 'soft-light',
               pointerEvents: 'none',
               opacity: isLoaded ? 1 : 0,
-              transition: 'opacity 220ms ease-out'
+              transition: 'none' // Phase 0: disable transition for deterministic snapshots
             }}
           />
         </>

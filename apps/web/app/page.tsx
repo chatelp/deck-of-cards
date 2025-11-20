@@ -194,6 +194,12 @@ function shuffleWithSeed<T>(source: T[], seed: number): T[] {
 export default function Page() {
   const searchParams = useSearchParams();
   const baselineMode = searchParams?.get('baseline') === '1';
+  // Allow fixing seed for deterministic tests
+  const testSeed = useMemo(() => {
+    const seedParam = searchParams?.get('seed');
+    return seedParam ? parseInt(seedParam, 10) : 0;
+  }, [searchParams]);
+
   const actionsRef = useRef<DeckViewActions | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
@@ -284,7 +290,8 @@ export default function Page() {
 
   useEffect(() => {
     if (cardsSeed === 0) {
-      const newSeed = Date.now();
+      // Use provided test seed or fallback to random
+      const newSeed = testSeed || Date.now();
       setCardsSeed(newSeed);
       setDesiredLayout('fan');
       setTimeout(() => {
@@ -292,7 +299,7 @@ export default function Page() {
         actionsRef.current?.fan();
       }, 60);
     }
-  }, [cardsSeed]);
+  }, [cardsSeed, testSeed]);
 
   const handleRestart = useCallback(() => {
     const newSeed = Date.now();

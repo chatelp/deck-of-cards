@@ -96,3 +96,4 @@ Les tests visuels peuvent être intégrés dans CI/CD. Voir `AGENTS_PROTOCOL.md`
 
 
 
+

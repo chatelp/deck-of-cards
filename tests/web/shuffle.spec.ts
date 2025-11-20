@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Animation Shuffle
  * Précondition 2.5 : Test déterministe et exhaustif
  */
-const BASELINE_URL = 'http://localhost:3000';
+const BASELINE_URL = 'http://localhost:3000?seed=12345';
 
 test.describe('Shuffle Animation', () => {
   test.beforeEach(async ({ page }) => {

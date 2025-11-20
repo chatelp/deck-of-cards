@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASELINE_URL = 'http://localhost:3000';
+const BASELINE_URL = 'http://localhost:3000?seed=12345';
 
 test('Deck renders (web baseline)', async ({ page }) => {
   await page.goto(BASELINE_URL);

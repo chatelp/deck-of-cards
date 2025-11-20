@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Layout Fan
  * Couverture ciblée pour différentes tailles (default, small, large)
  */
-const BASELINE_URL = 'http://localhost:3000';
+const BASELINE_URL = 'http://localhost:3000?seed=12345';
 
 test.describe('Fan Layout', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,7 +20,14 @@ test.describe('Fan Layout', () => {
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('fan-default.png');
@@ -36,7 +43,14 @@ test.describe('Fan Layout', () => {
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('fan-5-cards.png');
@@ -52,7 +66,14 @@ test.describe('Fan Layout', () => {
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
-    await page.waitForSelector('.deck-container[data-assets-ready="true"]', { timeout: 10000 });
+    // Wait for deck container to be ready (check DeckView's data-assets-ready)
+    await page.waitForFunction(
+      () => {
+        const deckView = document.querySelector('.deck-container[data-assets-ready="true"]');
+        return deckView !== null;
+      },
+      { timeout: 10000 }
+    );
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('fan-24-cards.png');
