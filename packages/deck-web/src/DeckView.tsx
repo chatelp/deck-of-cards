@@ -11,7 +11,7 @@ import {
 } from '@deck/core';
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
-import { WebMotionDriver } from './drivers/WebMotionDriver';
+import { ReanimatedDriver } from './drivers/ReanimatedDriver.web';
 
 const BOUNDARY_PADDING = 24;
 
@@ -30,13 +30,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
   ringRadius,
   autoFan = false,
   onDeckReady,
-  className
+  className,
+  style,
+  baselineMode = false
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const animationDriver: AnimationDriver = useMemo(
-    () => driver ?? new WebMotionDriver(),
+    () => driver ?? new ReanimatedDriver(),
     [driver]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
@@ -82,6 +84,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
   }, [deck, onDeckStateChange]);
 
   useEffect(() => {
+    if (baselineMode) {
+      return;
+    }
     const assetsToLoad = new Set<string>();
     deck.cards.forEach((card: CardState) => {
       const asset = resolveCardBackAsset(card, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
@@ -110,7 +115,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
       };
       image.src = asset;
     });
-  }, [deck.cards, deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]);
+  }, [baselineMode, deck.cards, deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -189,6 +194,23 @@ export const DeckView: React.FC<DeckViewProps> = ({
     [deck.cards, effectivePositions]
   );
 
+  const assetsReady = useMemo(() => {
+    if (baselineMode) {
+      return true;
+    }
+    const assetsToCheck = new Set<string>();
+    deck.cards.forEach((card: CardState) => {
+      const asset = resolveCardBackAsset(card, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
+      if (typeof asset === 'string' && asset) {
+        assetsToCheck.add(asset);
+      }
+    });
+    if (assetsToCheck.size === 0) {
+      return true;
+    }
+    return Array.from(assetsToCheck).every((asset) => loadedBackAssets[asset] === true);
+  }, [baselineMode, deck.cards, deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]);
+
   const deckTransform = useMemo(() => {
     if (deckBounds.width === 0 || deckBounds.height === 0) {
       return { translateX: 0, translateY: 0, scale: 1 };
@@ -234,7 +256,9 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const layout: DeckState['positions'] = effectivePositions;
   const fallbackRenderBack = useCallback(
     ({ state, data }: CardRenderProps) => {
-      const asset = resolveCardBackAsset(state, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
+      const asset = baselineMode
+        ? undefined
+        : resolveCardBackAsset(state, { defaultBackAsset: deck.config.defaultBackAsset }, { defaultAsset: defaultBackAsset });
 
       return (
         <CardBackArtwork
@@ -242,15 +266,21 @@ export const DeckView: React.FC<DeckViewProps> = ({
           label={data.name ?? 'Card back'}
           fallbackInitial={data.name?.[0]?.toUpperCase() ?? '🂠'}
           isAssetPreloaded={typeof asset === 'string' ? loadedBackAssets[asset] === true : undefined}
+          baselineMode={baselineMode}
         />
       );
     },
-    [deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]
+    [baselineMode, deck.config.defaultBackAsset, defaultBackAsset, loadedBackAssets]
   );
   const effectiveRenderBack = renderCardBack ?? fallbackRenderBack;
 
   return (
-    <div ref={containerRef} className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div
+      ref={containerRef}
+      className={className}
+      data-assets-ready={assetsReady ? 'true' : 'false'}
+      style={{ position: 'relative', width: '100%', height: '100%', ...(style ?? {}) }}
+    >
       <div style={canvasStyle}>
         {deck.cards.map((card: CardState) => {
           const cardLayout = layout[card.id] as CardLayout | undefined;
@@ -263,7 +293,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
               state={card}
               layout={cardLayout}
               isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
-              driver={animationDriver instanceof WebMotionDriver ? animationDriver : undefined}
+              driver={animationDriver}
               onFlip={async () => {
                 const willBeFaceUp = !card.faceUp;
                 try {
@@ -301,21 +331,13 @@ interface CardBackArtworkProps {
   label: string;
   fallbackInitial: string;
   isAssetPreloaded?: boolean;
+  baselineMode?: boolean;
 }
 
-const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbackInitial, isAssetPreloaded }) => {
+const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbackInitial, isAssetPreloaded, baselineMode }) => {
+  // Web Phase 0: force card back fully rendered (no preload fade) to avoid ghost/placeholder cards in snapshots
   const resolvedAsset = typeof asset === 'number' ? undefined : asset;
-  const [isLoaded, setIsLoaded] = useState(isAssetPreloaded ?? !resolvedAsset);
-
-  const loaderShadowStyle = useMemo<React.CSSProperties>(
-    () => ({
-      position: 'absolute',
-      inset: 0,
-      background: 'linear-gradient(140deg, rgba(24,32,52,0.9) 0%, rgba(17,24,39,0.9) 100%)',
-      pointerEvents: 'none'
-    }),
-    []
-  );
+  const [isLoaded, setIsLoaded] = useState(true);
 
   const wrapperStyle: React.CSSProperties = useMemo(
     () => ({
@@ -330,18 +352,23 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
   );
 
   useEffect(() => {
-    if (isAssetPreloaded) {
-      setIsLoaded(true);
+    // if an asset is explicitly marked preloaded, keep it; otherwise start as loaded (no fade)
+    if (isAssetPreloaded === false) {
+      setIsLoaded(false);
     }
   }, [isAssetPreloaded]);
 
-  useEffect(() => {
-    setIsLoaded(isAssetPreloaded ?? !resolvedAsset);
-  }, [resolvedAsset, isAssetPreloaded]);
-
   return (
     <div style={wrapperStyle}>
-      {resolvedAsset ? (
+      {baselineMode ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(140deg, #374151 0%, #0f172a 100%)'
+          }}
+        />
+      ) : resolvedAsset ? (
         <img
           src={resolvedAsset}
           alt={`${label} card back`}
@@ -353,9 +380,9 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
             height: '100%',
             objectFit: 'cover',
             display: 'block',
-            opacity: isLoaded ? 1 : 0,
-            transition: 'opacity 220ms ease-out'
-          }}
+          opacity: isLoaded ? 1 : 0.999, // keep deterministic value even before load
+          transition: 'none'
+        }}
         />
       ) : (
         <div
@@ -374,29 +401,32 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
           {fallbackInitial}
         </div>
       )}
-      {resolvedAsset && !isLoaded && <div style={loaderShadowStyle} />}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.5) 100%)',
-          mixBlendMode: 'multiply',
-          pointerEvents: 'none',
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 220ms ease-out'
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 42% 25%, rgba(255,255,255,0.18), transparent 58%)',
-          mixBlendMode: 'soft-light',
-          pointerEvents: 'none',
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 220ms ease-out'
-        }}
-      />
+      {!baselineMode && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.5) 100%)',
+              mixBlendMode: 'multiply',
+              pointerEvents: 'none',
+              opacity: isLoaded ? 1 : 0,
+              transition: 'opacity 220ms ease-out'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at 42% 25%, rgba(255,255,255,0.18), transparent 58%)',
+              mixBlendMode: 'soft-light',
+              pointerEvents: 'none',
+              opacity: isLoaded ? 1 : 0,
+              transition: 'opacity 220ms ease-out'
+            }}
+          />
+        </>
+      )}
     </div>
   );
 };

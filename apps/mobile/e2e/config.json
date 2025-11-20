@@ -1,0 +1,16 @@
+{
+  "rootDir": "..",
+  "testMatch": ["<rootDir>/e2e/**/*.test.js"],
+  "testRunner": "jest-circus/runner",
+  "testEnvironment": "detox/runners/jest/testEnvironment",
+  "globalSetup": "detox/runners/jest/globalSetup",
+  "globalTeardown": "detox/runners/jest/globalTeardown",
+  "reporters": ["detox/runners/jest/reporter"],
+  "testTimeout": 120000,
+  "maxWorkers": 1,
+  "verbose": true
+}
+
+
+
+

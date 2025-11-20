@@ -1,0 +1,10 @@
+{
+  "presets": ["next/babel"],
+  "plugins": ["react-native-reanimated/plugin"],
+  "ignore": [
+    "**/node_modules/react-native/**",
+    "**/node_modules/**/react-native/**",
+    "**/react-native/**"
+  ]
+}
+

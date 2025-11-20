@@ -40,6 +40,7 @@ export { fan, stack, ring, shuffle, animateTo, flip } from './primitives.js';
 export { useDeck } from './useDeck.js';
 
 export { NoopAnimationDriver } from './drivers.js';
+export type { CardAnimationHandle, EasingFn, EasingMap } from './drivers/types.js';
 
 export { DeckObservable } from './observable.js';
 

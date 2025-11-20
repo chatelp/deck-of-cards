@@ -11,6 +11,7 @@ import {
   RingOptions,
   ShuffleOptions
 } from '@deck/core';
+import { CSSProperties } from 'react';
 
 export interface CardRenderProps {
   state: CardState;
@@ -59,4 +60,6 @@ export interface DeckViewProps {
   className?: string;
   defaultBackAsset?: string;
   ringRadius?: number;
+  style?: CSSProperties;
+  baselineMode?: boolean;
 }

@@ -1,0 +1,141 @@
+{
+  "mobileTests": [
+    {
+      "filename": "deck-sizes.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/deck-sizes.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "animations": [],
+      "deckSizes": [
+        5
+      ],
+      "lines": 57
+    },
+    {
+      "filename": "example.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/example.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": false,
+      "isDeterministic": true,
+      "hasReload": false,
+      "layouts": [],
+      "animations": [],
+      "deckSizes": [],
+      "lines": 14
+    },
+    {
+      "filename": "fan.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/fan.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "fan"
+      ],
+      "animations": [],
+      "deckSizes": [],
+      "lines": 57
+    },
+    {
+      "filename": "flip.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/flip.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "animations": [
+        "flip"
+      ],
+      "deckSizes": [],
+      "lines": 68
+    },
+    {
+      "filename": "ring.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/ring.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "ring"
+      ],
+      "animations": [],
+      "deckSizes": [],
+      "lines": 48
+    },
+    {
+      "filename": "shuffle.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/shuffle.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "fan",
+        "ring"
+      ],
+      "animations": [
+        "shuffle"
+      ],
+      "deckSizes": [],
+      "lines": 59
+    },
+    {
+      "filename": "stack.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/stack.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "stack"
+      ],
+      "animations": [],
+      "deckSizes": [],
+      "lines": 48
+    },
+    {
+      "filename": "transitions.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/transitions.test.js",
+      "hasScreenshot": true,
+      "hasWaitFor": true,
+      "isDeterministic": true,
+      "hasReload": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "animations": [
+        "shuffle"
+      ],
+      "deckSizes": [],
+      "lines": 94
+    }
+  ],
+  "missingTests": [],
+  "coverage": {
+    "layouts": [
+      "fan",
+      "ring",
+      "stack"
+    ],
+    "animations": [
+      "flip",
+      "shuffle"
+    ]
+  }
+}

@@ -1,16 +1,119 @@
 const path = require('path');
+const webpack = require('webpack');
 
 const rootDir = path.resolve(__dirname, '..', '..');
 
 module.exports = {
-  transpilePackages: ['@deck/web', '@deck/core'],
-  webpack: (config) => {
+  transpilePackages: [
+    '@deck/core',
+    '@deck/web',
+    '@deck/rn',
+    'react-native-reanimated',
+    'react-native-web',
+    'moti'
+  ],
+  webpack: (config, { isServer }) => {
+    // Alias react-native to react-native-web (important: doit être avant autres règles)
+    const existingAlias = config.resolve.alias || {};
     config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      'react-native$': 'react-native-web'
+      ...existingAlias,
+      'react-native$': 'react-native-web',
+      // Use web version of reanimated for web builds (client-side only)
+      // Server-side peut utiliser la version normale
+      'react-native-reanimated': isServer 
+        ? 'react-native-reanimated' 
+        : 'react-native-reanimated'
     };
 
+    // Extensions for web compatibility
     config.resolve.extensions = [...config.resolve.extensions, '.web.js', '.web.ts', '.web.tsx'];
+
+    // Exclude react-native from webpack processing on client
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'react-native': false
+      };
+    }
+
+    // Exclude react-native from Babel processing (doit être fait pour tous les environnements)
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+    
+    // Trouver toutes les règles qui utilisent babel-loader et ajouter l'exclusion
+    config.module.rules.forEach((rule) => {
+      if (rule && rule.use) {
+        const uses = Array.isArray(rule.use) ? rule.use : [rule.use];
+        const hasBabel = uses.some(
+          (u) => u === 'babel-loader' || u?.loader === 'babel-loader' || (typeof u === 'object' && u?.loader?.includes('babel'))
+        );
+        
+        if (hasBabel) {
+          // Ajouter l'exclusion pour react-native
+          if (rule.exclude) {
+            const excludes = Array.isArray(rule.exclude) ? rule.exclude : [rule.exclude];
+            if (!excludes.some((e) => e.toString().includes('react-native'))) {
+              rule.exclude = [...excludes, /node_modules\/react-native\//];
+            }
+          } else {
+            rule.exclude = /node_modules\/react-native\//;
+          }
+        }
+      }
+    });
+
+    // Ignorer complètement react-native et rediriger vers react-native-web
+    config.plugins = config.plugins || [];
+    
+    // SSR-safe: Ignorer react-native-reanimated côté serveur
+    if (isServer) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^react-native-reanimated$/
+        })
+      );
+    }
+    
+    // IgnorePlugin pour ignorer react-native complètement
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^react-native$/
+      })
+    );
+    
+    // NormalModuleReplacementPlugin pour remplacer react-native par react-native-web
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^react-native$/,
+        'react-native-web'
+      )
+    );
+    
+    // Client-side: Utiliser react-native-reanimated/web
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /^react-native-reanimated$/,
+          'react-native-reanimated/web'
+        )
+      );
+    }
+    
+    // Définir une variable d'environnement pour forcer la plateforme web
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        'process.env.EXPO_PLATFORM': JSON.stringify('web'),
+        '__DEV__': JSON.stringify(process.env.NODE_ENV !== 'production')
+      })
+    );
+    
+    // Ignorer complètement les imports internes de react-native (Libraries, etc.)
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^react-native\//
+      })
+    );
+
     return config;
   }
 };

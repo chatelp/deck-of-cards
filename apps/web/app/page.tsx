@@ -1,8 +1,21 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { DeckView, DeckViewActions } from '@deck/web';
+import { useSearchParams } from 'next/navigation';
+import nextDynamic from 'next/dynamic';
 import { CardData, CardState, DeckState } from '@deck/core';
+import type { DeckViewActions } from '@deck/web';
+
+// Phase 0: Force client-only rendering for DeckView to eliminate hydration mismatches
+// No SSR for deck components - ensures identical rendering on client
+// ssr: false ensures DeckView is never rendered on the server
+const DeckView = nextDynamic(
+  () => import('@deck/web').then((mod) => ({ default: mod.DeckView })),
+  {
+    ssr: false,
+    loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Loading deck...</div>
+  }
+);
 
 interface YiJingCard extends CardData {
   hexagram: string;
@@ -179,6 +192,8 @@ function shuffleWithSeed<T>(source: T[], seed: number): T[] {
 }
 
 export default function Page() {
+  const searchParams = useSearchParams();
+  const baselineMode = searchParams?.get('baseline') === '1';
   const actionsRef = useRef<DeckViewActions | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [faceUp, setFaceUp] = useState<Record<string, boolean>>({});
@@ -504,39 +519,40 @@ export default function Page() {
       </section>
 
       <section className="demo-main">
-        <div className="deck-container" style={deckContainerStyle}>
-          <DeckView
-            key={deckSize}
-            cards={cards}
-            autoFan
-            drawLimit={drawLimit}
-            ringRadius={ringRadius}
-            defaultBackAsset={defaultBackAsset}
-            onDeckReady={(actions) => {
-              actionsRef.current = actions;
-            }}
-            onFlipCard={(cardId, isFaceUp) => {
-              setFaceUp((prev) => ({ ...prev, [cardId]: isFaceUp }));
-            }}
-            onDrawCard={(card) => {
-              setDrawnCards((prev) => {
-                if (prev.some((existing) => existing.id === card.id)) {
-                  return prev;
-                }
-                return [...prev, card];
-              });
-              setSelected(card.id);
-            }}
-            onDeckStateChange={handleDeckStateChange}
-            renderCardFace={({ data }) => (
-              <div className="card-face">
-                <span className="card-hexagram">{(data as YiJingCard).hexagram}</span>
-                <span className="card-title">{data.name}</span>
-                <span className="card-meaning">{(data as YiJingCard).meaning}</span>
-              </div>
-            )}
-          />
-        </div>
+        <DeckView
+          key={deckSize}
+          className="deck-container"
+          style={deckContainerStyle}
+          baselineMode={baselineMode}
+          cards={cards}
+          autoFan
+          drawLimit={drawLimit}
+          ringRadius={ringRadius}
+          defaultBackAsset={defaultBackAsset}
+          onDeckReady={(actions) => {
+            actionsRef.current = actions;
+          }}
+          onFlipCard={(cardId, isFaceUp) => {
+            setFaceUp((prev) => ({ ...prev, [cardId]: isFaceUp }));
+          }}
+          onDrawCard={(card) => {
+            setDrawnCards((prev) => {
+              if (prev.some((existing) => existing.id === card.id)) {
+                return prev;
+              }
+              return [...prev, card];
+            });
+            setSelected(card.id);
+          }}
+          onDeckStateChange={handleDeckStateChange}
+          renderCardFace={({ data }) => (
+            <div className="card-face">
+              <span className="card-hexagram">{(data as YiJingCard).hexagram}</span>
+              <span className="card-title">{data.name}</span>
+              <span className="card-meaning">{(data as YiJingCard).meaning}</span>
+            </div>
+          )}
+        />
 
         <div className="deck-insights">
           <div className="insight-item">

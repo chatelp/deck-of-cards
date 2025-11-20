@@ -24,3 +24,9 @@ dist/
 !README.md
 !docs/**/*.md
 .vercel
+playwright-report/
+test-results/
+tests/web/*.spec.ts-snapshots/
+tests/mobile/screenshots/
+tests/mobile/artifacts/
+apps/mobile/ios/build/

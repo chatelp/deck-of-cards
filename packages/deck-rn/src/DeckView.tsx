@@ -18,7 +18,7 @@ import {
   useDeck
 } from '@deck/core';
 import { CardView, CARD_WIDTH, CARD_HEIGHT } from './CardView';
-import { ReanimatedDriver } from './drivers/ReanimatedDriver';
+import { ReanimatedDriver } from './drivers/ReanimatedDriver.native';
 import { RN_DECK_VERSION } from './version';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 import { computeDeckScene, calculateLayoutParams, DeckScene } from './DeckPositioning';

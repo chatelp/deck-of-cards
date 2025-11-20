@@ -199,6 +199,7 @@ interface ActionButtonProps {
 
 const ActionButton: React.FC<ActionButtonProps> = ({ label, onPress, active = false, disabled = false }) => (
   <TouchableOpacity
+    testID={label}
     onPress={onPress}
     disabled={disabled}
     style={[styles.actionButton, active && styles.actionButtonActive, disabled && styles.actionButtonDisabled]}
@@ -216,7 +217,11 @@ interface OptionButtonProps {
 }
 
 const OptionButton: React.FC<OptionButtonProps> = ({ label, active, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={[styles.optionButton, active && styles.optionButtonActive]}>
+  <TouchableOpacity 
+    testID={`option-${label}`}
+    onPress={onPress} 
+    style={[styles.optionButton, active && styles.optionButtonActive]}
+  >
     <Text style={[styles.optionButtonText, active && styles.optionButtonTextActive]}>{label}</Text>
   </TouchableOpacity>
 );
@@ -411,6 +416,7 @@ export default function App() {
 
           <View style={styles.deckSection}>
             <View
+              testID="DeckRoot"
               style={styles.deckContainer}
               onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;

@@ -1,0 +1,168 @@
+{
+  "webTests": [
+    {
+      "filename": "deck-sizes.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/deck-sizes.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 59
+    },
+    {
+      "filename": "example.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/example.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "line"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 11
+    },
+    {
+      "filename": "fan.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/fan.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "fan"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 60
+    },
+    {
+      "filename": "flip.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/flip.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "deckSizes": [],
+      "animations": [
+        "flip"
+      ],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 68
+    },
+    {
+      "filename": "ring.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/ring.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "ring"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 54
+    },
+    {
+      "filename": "shuffle.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/shuffle.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "fan",
+        "ring"
+      ],
+      "deckSizes": [],
+      "animations": [
+        "shuffle"
+      ],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 73
+    },
+    {
+      "filename": "stack.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/stack.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "stack"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 54
+    },
+    {
+      "filename": "transitions.spec.ts",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/tests/web/transitions.spec.ts",
+      "hasScreenshot": true,
+      "layouts": [
+        "fan",
+        "ring",
+        "stack"
+      ],
+      "deckSizes": [],
+      "animations": [
+        "shuffle"
+      ],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": true,
+      "lines": 112
+    }
+  ],
+  "mobileTests": [
+    {
+      "filename": "example.test.js",
+      "path": "/Users/pierre/Dev/Cursor.ai/deck-of-cards/apps/mobile/e2e/example.test.js",
+      "hasScreenshot": true,
+      "layouts": [
+        "line"
+      ],
+      "deckSizes": [],
+      "animations": [],
+      "transitions": [],
+      "interactiveStates": [],
+      "isDeterministic": true,
+      "hasWaitForAnimations": false,
+      "lines": 14
+    }
+  ],
+  "missingTests": [],
+  "coverage": {
+    "layouts": [
+      "fan",
+      "ring",
+      "stack",
+      "line"
+    ],
+    "animations": [
+      "flip",
+      "shuffle"
+    ],
+    "deckSizes": []
+  }
+}

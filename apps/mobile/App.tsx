@@ -405,7 +405,7 @@ function MainDeckScreen() {
         </View>
 
         <View style={mainStyles.deckSection}>
-          <View style={mainStyles.deckContainer} onLayout={handleDeckContainerLayout}>
+          <View style={mainStyles.deckContainer} onLayout={handleDeckContainerLayout} testID="DeckRoot">
             {__DEV__ && (
               <>
                 <View style={mainStyles.centerIndicatorVertical} />

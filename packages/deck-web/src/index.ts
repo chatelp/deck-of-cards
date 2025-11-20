@@ -2,7 +2,8 @@
 
 export { DeckView } from './DeckView';
 export { CardView } from './CardView';
-export { WebMotionDriver } from './drivers/WebMotionDriver';
+export { ReanimatedDriver } from './drivers/ReanimatedDriver.web';
+export type { ReanimatedCardAnimationHandle } from './drivers/ReanimatedDriver.web';
 export type {
   DeckViewProps,
   DeckViewActions,

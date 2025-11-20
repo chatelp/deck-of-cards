@@ -4,10 +4,14 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
+    "start": "expo start --dev-client",
     "dev": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "detox:build:ios": "detox build --config-path ./detox.config.js --configuration ios.sim.release",
+    "detox:test:ios": "detox test --config-path ./detox.config.js --configuration ios.sim.release",
+    "test:visual:mobile": "pnpm run detox:build:ios && pnpm run detox:test:ios"
   },
   "dependencies": {
     "@deck/core": "workspace:*",
@@ -24,6 +28,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "detox": "^20.14.0",
+    "jest": "^29.7.0",
+    "jest-circus": "^29.7.0",
     "typescript": "~5.9.2"
   }
 }

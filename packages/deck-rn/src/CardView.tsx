@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CardViewProps } from './types';
-import { ReanimatedDriver } from './drivers/ReanimatedDriver';
+import { ReanimatedDriver } from './drivers/ReanimatedDriver.native';
 
 export const CARD_WIDTH = 160;
 export const CARD_HEIGHT = 240;
@@ -143,7 +143,12 @@ export const CardView: React.FC<CardViewProps> = ({
     : renderBack({ state, data: state.data!, layout, isSelected });
 
   return (
-    <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.pressable}>
+    <Pressable 
+      testID={state.id}
+      onPressIn={handlePressIn} 
+      onPressOut={handlePressOut} 
+      style={styles.pressable}
+    >
       <Animated.View style={[styles.card, { width: cardWidth, height: cardHeight }, animatedStyle, isSelected && styles.selected, style]}>{content}</Animated.View>
     </Pressable>
   );
