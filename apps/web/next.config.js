@@ -74,13 +74,6 @@ module.exports = {
       );
     }
     
-    // IgnorePlugin pour ignorer react-native complètement
-    config.plugins.push(
-      new webpack.IgnorePlugin({
-        resourceRegExp: /^react-native$/
-      })
-    );
-    
     // NormalModuleReplacementPlugin pour remplacer react-native par react-native-web
     config.plugins.push(
       new webpack.NormalModuleReplacementPlugin(
@@ -104,13 +97,6 @@ module.exports = {
       new webpack.DefinePlugin({
         'process.env.EXPO_PLATFORM': JSON.stringify('web'),
         '__DEV__': JSON.stringify(process.env.NODE_ENV !== 'production')
-      })
-    );
-    
-    // Ignorer complètement les imports internes de react-native (Libraries, etc.)
-    config.plugins.push(
-      new webpack.IgnorePlugin({
-        resourceRegExp: /^react-native\//
       })
     );
 
