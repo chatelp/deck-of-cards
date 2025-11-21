@@ -89,15 +89,15 @@ module.exports = {
       )
     );
     
-    // Client-side: Utiliser react-native-reanimated/web
-    if (!isServer) {
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(
-          /^react-native-reanimated$/,
-          'react-native-reanimated/web'
-        )
-      );
-    }
+    // Client-side: Utiliser react-native-reanimated directement (la version 4 supporte le web nativement)
+    // if (!isServer) {
+    //   config.plugins.push(
+    //     new webpack.NormalModuleReplacementPlugin(
+    //       /^react-native-reanimated$/,
+    //       'react-native-reanimated'
+    //     )
+    //   );
+    // }
     
     // Définir une variable d'environnement pour forcer la plateforme web
     config.plugins.push(

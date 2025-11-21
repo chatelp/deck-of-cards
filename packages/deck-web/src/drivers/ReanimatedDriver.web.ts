@@ -3,6 +3,8 @@
 import type { AnimationDriver } from '@deck/core';
 import { ReanimatedDriver as ClientDriver } from './ReanimatedDriver.web.client';
 
+export type { ReanimatedCardAnimationHandle } from './ReanimatedDriver.web.client';
+
 // SSR-safe: Mock driver for server-side rendering
 class MockReanimatedDriver implements AnimationDriver {
   register() {}
