@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Animation Flip
  * Couverture ciblée sur plusieurs layouts
  */
-const BASELINE_URL = 'http://localhost:3000?seed=12345';
+const BASELINE_URL = 'http://localhost:3000?seed=12345&animation=0';
 
 test.describe('Flip Animation', () => {
   test.beforeEach(async ({ page }) => {
@@ -76,14 +76,21 @@ test.describe('Flip Animation', () => {
     await page.waitForTimeout(500);
     
     // Try standard click, fall back to JS click if needed
-    try {
-      await firstCard.click({ force: true, timeout: 5000 });
-    } catch (e) {
-      console.log('Standard click failed, trying JS click', e);
-      await firstCard.evaluate((node) => (node as HTMLElement).click());
+    const box = await firstCard.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+    } else {
+      // Fallback if bounding box missing (unlikely)
+      try {
+        await firstCard.click({ force: true, timeout: 5000 });
+      } catch (e) {
+        console.log('Standard click failed, trying JS click', e);
+        await firstCard.evaluate((node) => (node as HTMLElement).click());
+      }
     }
     
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000); // Wait for flip animation (in place)
 
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
@@ -100,6 +107,10 @@ test.describe('Flip Animation', () => {
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('flip-from-fan.png');
+    
+    if (box) {
+      await page.mouse.up(); // Release to complete interaction
+    }
   });
 
   test('flip multiple cards - from ring layout', async ({ page }) => {
@@ -203,13 +214,19 @@ test.describe('Flip Animation', () => {
     await topCard.scrollIntoViewIfNeeded();
     await page.waitForTimeout(200);
     
-    try {
-      await topCard.click({ force: true, timeout: 5000 });
-    } catch (e) {
-      console.log('Standard click failed, trying JS click', e);
-      await topCard.evaluate((node) => (node as HTMLElement).click());
+    const box = await topCard.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+    } else {
+      try {
+        await topCard.click({ force: true, timeout: 5000 });
+      } catch (e) {
+        console.log('Standard click failed, trying JS click', e);
+        await topCard.evaluate((node) => (node as HTMLElement).click());
+      }
     }
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
@@ -226,5 +243,9 @@ test.describe('Flip Animation', () => {
 
     const deckContainer = page.locator('.deck-container');
     await expect(deckContainer).toHaveScreenshot('flip-from-stack.png');
+    
+    if (box) {
+      await page.mouse.up();
+    }
   });
 });

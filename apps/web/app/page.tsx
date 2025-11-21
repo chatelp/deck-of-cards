@@ -194,6 +194,10 @@ function shuffleWithSeed<T>(source: T[], seed: number): T[] {
 export default function Page() {
   const searchParams = useSearchParams();
   const baselineMode = searchParams?.get('baseline') === '1';
+  const animationParam = searchParams?.get('animation');
+  // Phase 1: Enable animations by default, disable only if explicitly requested
+  const disableAnimations = animationParam === '0';
+
   // Allow fixing seed for deterministic tests
   const testSeed = useMemo(() => {
     const seedParam = searchParams?.get('seed');
@@ -531,6 +535,7 @@ export default function Page() {
           className="deck-container"
           style={deckContainerStyle}
           baselineMode={baselineMode}
+          disableAnimations={disableAnimations}
           cards={cards}
           autoFan
           drawLimit={drawLimit}

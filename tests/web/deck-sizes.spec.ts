@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Différentes tailles de deck
  * Précondition 2.5 : Test déterministe et exhaustif
  */
-const BASELINE_URL = 'http://localhost:3000?seed=12345';
+const BASELINE_URL = 'http://localhost:3000?seed=12345&animation=0';
 
 test.describe('Deck Sizes', () => {
   test.beforeEach(async ({ page }) => {

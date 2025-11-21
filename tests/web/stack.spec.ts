@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test visuel : Layout Stack
  * Couverture ciblée pour différentes tailles (default, small, large)
  */
-const BASELINE_URL = 'http://localhost:3000?seed=12345';
+const BASELINE_URL = 'http://localhost:3000?seed=12345&animation=0';
 
 test.describe('Stack Layout', () => {
   test.beforeEach(async ({ page }) => {

@@ -12,6 +12,7 @@ import {
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
 import { ReanimatedDriver } from './drivers/ReanimatedDriver.web';
+import { StaticDriver } from './drivers/StaticDriver';
 
 const BOUNDARY_PADDING = 24;
 
@@ -32,14 +33,15 @@ export const DeckView: React.FC<DeckViewProps> = ({
   onDeckReady,
   className,
   style,
-  baselineMode = false
+  baselineMode = false,
+  disableAnimations = false
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const animationDriver: AnimationDriver = useMemo(
-    () => driver ?? new ReanimatedDriver(),
-    [driver]
+    () => driver ?? (disableAnimations ? new StaticDriver() : new ReanimatedDriver()),
+    [driver, disableAnimations]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
   const { deck, fan, ring, shuffle, resetStack, flip, selectCard, drawCard, animateTo } = deckHook;

@@ -62,4 +62,5 @@ export interface DeckViewProps {
   ringRadius?: number;
   style?: CSSProperties;
   baselineMode?: boolean;
+  disableAnimations?: boolean;
 }
