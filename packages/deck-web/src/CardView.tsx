@@ -7,15 +7,23 @@ import Animated, {
 import { CardViewProps } from './types';
 import { ReanimatedCardAnimationHandle } from './drivers/ReanimatedDriver.web.client';
 
-// Create a CleanButton component that filters out non-standard props passed by Reanimated
-// This prevents "React does not recognize the `nativeID` prop" warnings
+// ADAPTER: CleanButton bridges the gap between Reanimated and standard HTML DOM.
+// 1. Filters out Native props (nativeID, forwardedRef) that React warns about.
+// 2. Flattens style arrays (Reanimated uses arrays, React DOM expects objects).
 const CleanButton = React.forwardRef<HTMLButtonElement, any>((props, ref) => {
-  const { nativeID, ...rest } = props;
-  return <button ref={ref} {...rest} />;
+  const { nativeID, forwardedRef, style, ...rest } = props;
+
+  // Reanimated often passes styles as an array (e.g. [base, animated]). 
+  // React DOM <button> crashes if style is an array. We must flatten it.
+  const flattenedStyle = Array.isArray(style)
+    ? style.reduce((acc, s) => Object.assign(acc, s), {})
+    : style;
+
+  return <button ref={ref} style={flattenedStyle} {...rest} />;
 });
 CleanButton.displayName = 'CleanButton';
 
-// Create animated button component using the wrapper
+// Create animated button component using the robust wrapper
 const AnimatedButton = Animated.createAnimatedComponent(CleanButton) as any;
 
 export const CARD_WIDTH = 160;
