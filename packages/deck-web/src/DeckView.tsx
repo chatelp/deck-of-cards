@@ -296,6 +296,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
               layout={cardLayout}
               isSelected={selectedIds ? selectedIds.includes(card.id) : card.selected}
               driver={animationDriver}
+              disableAnimations={disableAnimations}
               onFlip={async () => {
                 const willBeFaceUp = !card.faceUp;
                 try {

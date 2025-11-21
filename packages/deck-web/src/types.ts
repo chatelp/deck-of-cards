@@ -31,6 +31,7 @@ export interface CardViewProps {
   renderFace: (props: CardRenderProps) => ReactNode;
   renderBack: (props: CardRenderProps) => ReactNode;
   driver?: AnimationDriver;
+  disableAnimations?: boolean;
 }
 
 export interface DeckViewActions {

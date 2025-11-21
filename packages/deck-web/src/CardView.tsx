@@ -1,5 +1,14 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  runOnJS
+} from 'react-native-reanimated';
 import { CardViewProps } from './types';
+import { ReanimatedCardAnimationHandle } from './drivers/ReanimatedDriver.web.client';
+
+// Create animated button component
+const AnimatedButton = Animated.createAnimatedComponent('button' as any) as any;
 
 export const CARD_WIDTH = 160;
 export const CARD_HEIGHT = 240;
@@ -12,7 +21,8 @@ export const CardView: React.FC<CardViewProps> = ({
   onSelect,
   renderFace,
   renderBack,
-  driver
+  driver,
+  disableAnimations = false
 }) => {
   const [isInteracting, setIsInteracting] = useState(false);
   const pointerActiveRef = useRef(false);
@@ -20,14 +30,64 @@ export const CardView: React.FC<CardViewProps> = ({
   const flipPromiseRef = useRef<Promise<void> | undefined>(undefined);
   const frontContent = renderBack({ state, data: state.data!, layout, isSelected });
   const backContent = renderFace({ state, data: state.data!, layout, isSelected });
+  
   const centeredLayout = useMemo(() => ({
     ...layout,
     x: layout.x - CARD_WIDTH / 2,
     y: layout.y - CARD_HEIGHT / 2
   }), [layout]);
 
-  // Phase 0: Static styles without animations
-  const cardStyle = useMemo<React.CSSProperties>(() => {
+  // --- Reanimated Logic ---
+  // Initialize SharedValues with current layout
+  const translateX = useSharedValue(centeredLayout.x);
+  const translateY = useSharedValue(centeredLayout.y);
+  const rotation = useSharedValue(centeredLayout.rotation);
+  const scale = useSharedValue(centeredLayout.scale);
+  const rotateY = useSharedValue(state.faceUp ? 180 : 0);
+  const zIndex = useSharedValue(layout.zIndex);
+
+  // Register/Unregister with driver
+  useEffect(() => {
+    if (!driver) return;
+
+    const handle: ReanimatedCardAnimationHandle = {
+      translateX,
+      translateY,
+      rotation,
+      scale,
+      rotateY,
+      zIndex,
+      offsetX: CARD_WIDTH / 2,
+      offsetY: CARD_HEIGHT / 2
+    };
+
+    // Register logic
+    // Note: We cast to any because the interface might slightly differ in TS definition but structure matches
+    (driver as any).register?.(state.id, handle, state.faceUp);
+
+    return () => {
+      (driver as any).unregister?.(state.id);
+    };
+  }, [driver, state.id, state.faceUp, translateX, translateY, rotation, scale, rotateY, zIndex]);
+
+  // Define animated style
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotation.value}deg` },
+        { scale: scale.value },
+        { rotateY: `${rotateY.value}deg` } // 3D rotation for flip
+      ],
+      zIndex: zIndex.value + (isSelected ? 1000 : 0) + (isInteracting ? 2000 : 0),
+      // Ensure visibility
+      opacity: 1,
+    };
+  });
+
+  // --- Static Logic (Phase 0 / Fallback) ---
+  const staticStyle = useMemo<React.CSSProperties>(() => {
     const transformParts: string[] = [];
     transformParts.push(`translate(${centeredLayout.x}px, ${centeredLayout.y}px)`);
     if (centeredLayout.rotation !== 0) {
@@ -41,22 +101,26 @@ export const CardView: React.FC<CardViewProps> = ({
     }
     
     return {
-      position: 'absolute',
-      left: '50%',
-      top: '50%',
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
-      borderRadius: 12,
-      background: 'transparent',
-      border: 'none',
-      padding: 0,
-      cursor: isSelected ? 'default' : 'pointer',
-      zIndex: layout.zIndex + (isSelected ? 1000 : 0) + (isInteracting ? 2000 : 0),
       transform: transformParts.join(' '),
-      transformStyle: 'preserve-3d',
-      boxShadow: 'none' // Phase 0: Explicitly disable shadows to ensure deterministic snapshots
+      zIndex: layout.zIndex + (isSelected ? 1000 : 0) + (isInteracting ? 2000 : 0),
     };
   }, [centeredLayout, state.faceUp, layout.zIndex, isSelected, isInteracting]);
+
+  // Common base style
+  const baseStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: '50%', // We use center origin logic
+    top: '50%',
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 12,
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    cursor: isSelected ? 'default' : 'pointer',
+    transformStyle: 'preserve-3d', // Essential for 3D flip
+    boxShadow: 'none'
+  };
 
   const settleInteraction = useCallback(async () => {
     const pendingFlip = flipPromiseRef.current;
@@ -171,8 +235,19 @@ export const CardView: React.FC<CardViewProps> = ({
     []
   );
 
+  // Choose style based on mode
+  // If animations are disabled, we use the React-computed static style.
+  // If enabled, we use the Reanimated style.
+  // Note: We merge baseStyle in both cases.
+  const finalStyle = disableAnimations 
+    ? { ...baseStyle, ...staticStyle }
+    : { ...baseStyle, ...animatedStyle }; // Reanimated style object is compatible with style prop of Animated components
+
+  // We use AnimatedButton in both cases for consistency, or we could conditional render.
+  // AnimatedButton works with static styles too.
+  
   return (
-    <button
+    <AnimatedButton
       type="button"
       data-testid={state.id}
       onClick={handleClick}
@@ -180,12 +255,12 @@ export const CardView: React.FC<CardViewProps> = ({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       className="deck-card card-3d-wrapper"
-      style={cardStyle}
+      style={finalStyle}
     >
       <div 
         className="card-side card-side-front"
         style={{
-          boxShadow: 'none' // Phase 0: Explicitly disable shadows to ensure deterministic snapshots
+          boxShadow: 'none'
         }}
       >
         {frontContent}
@@ -193,11 +268,11 @@ export const CardView: React.FC<CardViewProps> = ({
       <div 
         className="card-side card-side-back"
         style={{
-          boxShadow: 'none' // Phase 0: Explicitly disable shadows to ensure deterministic snapshots
+          boxShadow: 'none'
         }}
       >
         {backContent}
       </div>
-    </button>
+    </AnimatedButton>
   );
 };
