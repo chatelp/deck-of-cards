@@ -7,8 +7,16 @@ import Animated, {
 import { CardViewProps } from './types';
 import { ReanimatedCardAnimationHandle } from './drivers/ReanimatedDriver.web.client';
 
-// Create animated button component
-const AnimatedButton = Animated.createAnimatedComponent('button' as any) as any;
+// Create a CleanButton component that filters out non-standard props passed by Reanimated
+// This prevents "React does not recognize the `nativeID` prop" warnings
+const CleanButton = React.forwardRef<HTMLButtonElement, any>((props, ref) => {
+  const { nativeID, ...rest } = props;
+  return <button ref={ref} {...rest} />;
+});
+CleanButton.displayName = 'CleanButton';
+
+// Create animated button component using the wrapper
+const AnimatedButton = Animated.createAnimatedComponent(CleanButton) as any;
 
 export const CARD_WIDTH = 160;
 export const CARD_HEIGHT = 240;
