@@ -4,6 +4,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { CardViewProps } from './types';
 import { ReanimatedDriver } from './drivers/ReanimatedDriver.native';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export const CARD_WIDTH = 160;
 export const CARD_HEIGHT = 240;
 
@@ -143,14 +145,22 @@ export const CardView: React.FC<CardViewProps> = ({
     : renderBack({ state, data: state.data!, layout, isSelected });
 
   return (
-    <Pressable 
+    <AnimatedPressable 
       testID={state.id}
+      accessibilityIdentifier={state.id}
       onPressIn={handlePressIn} 
       onPressOut={handlePressOut} 
-      style={styles.pressable}
+      style={[
+        styles.pressable, 
+        styles.card, 
+        { width: cardWidth, height: cardHeight }, 
+        animatedStyle, 
+        isSelected && styles.selected, 
+        style
+      ]}
     >
-      <Animated.View style={[styles.card, { width: cardWidth, height: cardHeight }, animatedStyle, isSelected && styles.selected, style]}>{content}</Animated.View>
-    </Pressable>
+      {content}
+    </AnimatedPressable>
   );
 };
 

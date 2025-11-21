@@ -219,6 +219,7 @@ interface OptionButtonProps {
 const OptionButton: React.FC<OptionButtonProps> = ({ label, active, onPress }) => (
   <TouchableOpacity 
     testID={`option-${label}`}
+    accessibilityIdentifier={`option-${label}`}
     onPress={onPress} 
     style={[styles.optionButton, active && styles.optionButtonActive]}
   >
@@ -408,7 +409,7 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView testID="MainScrollView" accessibilityIdentifier="MainScrollView" contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Text style={styles.title}>Yi Jing Deck Prototype</Text>
             <Text style={styles.subtitle}>Cross-platform animation base — React Native + Web</Text>

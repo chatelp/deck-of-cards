@@ -19,39 +19,78 @@ describe('Shuffle Animation - Mobile', () => {
 
   it('shuffle - from fan layout', async () => {
     // Mettre en fan d'abord
-    await element(by.id('Fan')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Activer "Restore layout after shuffle" si nécessaire
     // Note: Adapter selon l'interface mobile
     
     // Shuffle
-    await element(by.id('Shuffle')).tap();
+    try {
+      await element(by.id('Shuffle')).tap();
+    } catch (e) {
+      await element(by.text('Shuffle')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 2000)); // Shuffle prend plus de temps
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('shuffle-from-fan-mobile.png');
   });
 
   it('shuffle - from ring layout', async () => {
-    await element(by.id('Ring')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Ring')).tap();
+    } catch (e) {
+      await element(by.text('Ring')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Shuffle')).tap();
+    try {
+      await element(by.id('Shuffle')).tap();
+    } catch (e) {
+      await element(by.text('Shuffle')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('shuffle-from-ring-mobile.png');
   });
 
   it('shuffle - without restore layout', async () => {
-    await element(by.id('Fan')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Désactiver "Restore layout after shuffle" si possible
     // Note: Adapter selon l'interface mobile
     
-    await element(by.id('Shuffle')).tap();
+    try {
+      await element(by.id('Shuffle')).tap();
+    } catch (e) {
+      await element(by.text('Shuffle')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('shuffle-no-restore-mobile.png');
   });
 });

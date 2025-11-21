@@ -23,31 +23,70 @@ describe('Deck Sizes - Mobile', () => {
 
   deckSizes.forEach(size => {
     it(`deck size ${size} - fan layout`, async () => {
-      await element(by.id(`option-${size}`)).tap();
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+      try {
+        await element(by.id(`option-${size}`)).tap();
+      } catch (e) {
+        await element(by.text(`${size}`)).atIndex(0).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      await element(by.id('Fan')).tap();
+      try {
+        await element(by.id('Fan')).tap();
+      } catch (e) {
+        await element(by.text('Fan')).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Remonter pour voir les cartes avant le screenshot
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       await device.takeScreenshot(`deck-size-${size}-fan-mobile.png`);
     });
 
     it(`deck size ${size} - ring layout`, async () => {
-      await element(by.id(`option-${size}`)).tap();
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+      try {
+        await element(by.id(`option-${size}`)).tap();
+      } catch (e) {
+        await element(by.text(`${size}`)).atIndex(0).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      await element(by.id('Ring')).tap();
+      try {
+        await element(by.id('Ring')).tap();
+      } catch (e) {
+        await element(by.text('Ring')).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Remonter pour voir les cartes avant le screenshot
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       await device.takeScreenshot(`deck-size-${size}-ring-mobile.png`);
     });
 
     it(`deck size ${size} - stack layout`, async () => {
-      await element(by.id(`option-${size}`)).tap();
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+      try {
+        await element(by.id(`option-${size}`)).tap();
+      } catch (e) {
+        await element(by.text(`${size}`)).atIndex(0).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      await element(by.id('Stack')).tap();
+      try {
+        await element(by.id('Stack')).tap();
+      } catch (e) {
+        await element(by.text('Stack')).tap();
+      }
       await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Remonter pour voir les cartes avant le screenshot
+      await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       await device.takeScreenshot(`deck-size-${size}-stack-mobile.png`);
     });

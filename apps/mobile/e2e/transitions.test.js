@@ -18,75 +18,166 @@ describe('Layout Transitions - Mobile', () => {
   });
 
   it('transition fan → ring', async () => {
-    await element(by.id('Fan')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Ring')).tap();
+    try {
+      await element(by.id('Ring')).tap();
+    } catch (e) {
+      await element(by.text('Ring')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-fan-to-ring-mobile.png');
   });
 
   it('transition ring → stack', async () => {
-    await element(by.id('Ring')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Ring')).tap();
+    } catch (e) {
+      await element(by.text('Ring')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Stack')).tap();
+    try {
+      await element(by.id('Stack')).tap();
+    } catch (e) {
+      await element(by.text('Stack')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-ring-to-stack-mobile.png');
   });
 
   it('transition stack → fan', async () => {
-    await element(by.id('Stack')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Stack')).tap();
+    } catch (e) {
+      await element(by.text('Stack')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Fan')).tap();
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-stack-to-fan-mobile.png');
   });
 
   it('transition fan → stack', async () => {
-    await element(by.id('Fan')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Stack')).tap();
+    try {
+      await element(by.id('Stack')).tap();
+    } catch (e) {
+      await element(by.text('Stack')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-fan-to-stack-mobile.png');
   });
 
   it('transition ring → fan', async () => {
-    await element(by.id('Ring')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Ring')).tap();
+    } catch (e) {
+      await element(by.text('Ring')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Fan')).tap();
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-ring-to-fan-mobile.png');
   });
 
   it('transition stack → ring', async () => {
-    await element(by.id('Stack')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Stack')).tap();
+    } catch (e) {
+      await element(by.text('Stack')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    await element(by.id('Ring')).tap();
+    try {
+      await element(by.id('Ring')).tap();
+    } catch (e) {
+      await element(by.text('Ring')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-stack-to-ring-mobile.png');
   });
 
   it('transition fan → shuffle → fan', async () => {
-    await element(by.id('Fan')).tap();
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
+    try {
+      await element(by.id('Fan')).tap();
+    } catch (e) {
+      await element(by.text('Fan')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Activer restore layout si nécessaire
     // Note: Adapter selon l'interface mobile
     
-    await element(by.id('Shuffle')).tap();
+    try {
+      await element(by.id('Shuffle')).tap();
+    } catch (e) {
+      await element(by.text('Shuffle')).tap();
+    }
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    // Remonter pour voir les cartes avant le screenshot
+    await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     await device.takeScreenshot('transition-fan-shuffle-fan-mobile.png');
   });
 });
