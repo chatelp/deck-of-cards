@@ -82,6 +82,14 @@ module.exports = {
       )
     );
     
+    // Ignorer complètement les imports internes de react-native (Libraries, etc.)
+    // Cela empêche d'entrer dans le code source Flow de react-native qui fait planter le build web
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^react-native\//
+      })
+    );
+    
     // Client-side: Utiliser react-native-reanimated directement (la version 4 supporte le web nativement)
     // if (!isServer) {
     //   config.plugins.push(
