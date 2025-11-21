@@ -13,11 +13,12 @@ module.exports = {
     'moti'
   ],
   webpack: (config, { isServer }) => {
-    // Alias react-native to react-native-web (important: doit être avant autres règles)
+    // Alias react-native to our local shim (important: doit être avant autres règles)
     const existingAlias = config.resolve.alias || {};
     config.resolve.alias = {
       ...existingAlias,
-      'react-native$': 'react-native-web',
+      'react-native$': path.resolve(rootDir, 'packages/deck-web/src/react-native-shim.js'),
+      
       // Use web version of reanimated for web builds (client-side only)
       // Server-side peut utiliser la version normale
       'react-native-reanimated': isServer 
@@ -73,14 +74,6 @@ module.exports = {
         })
       );
     }
-    
-    // NormalModuleReplacementPlugin pour remplacer react-native par react-native-web
-    config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(
-        /^react-native$/,
-        'react-native-web'
-      )
-    );
     
     // Ignorer complètement les imports internes de react-native (Libraries, etc.)
     // Cela empêche d'entrer dans le code source Flow de react-native qui fait planter le build web
