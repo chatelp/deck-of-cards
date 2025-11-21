@@ -2,15 +2,48 @@
 
 import type { AnimationDriver, AnimationSequence, CardId, EasingName } from '@deck/core';
 import type { EasingFn } from '@deck/core';
-import {
-  withTiming,
-  withDelay,
-  Easing,
-  cancelAnimation,
-  runOnJS,
-  SharedValue
-} from 'react-native-reanimated';
 
+// NO TOP-LEVEL IMPORTS OF react-native-reanimated
+// All imports must be dynamic and inside functions/blocks
+
+// Type definition for SharedValue - defined locally to avoid importing react-native-reanimated
+export type SharedValue<T> = { value: T };
+
+// SSR-safe: Lazy load react-native-reanimated only on client
+// Using dynamic import() for ESM compatibility
+// Next.js webpack will handle the /web redirect at runtime
+const fallbackEasing = (t: number) => t;
+let withTiming: any = (value: number) => value;
+let withDelay: any = (_delay: number, animation: any) => animation;
+let Easing: any = {
+  linear: fallbackEasing,
+  in: (easing: any) => easing,
+  out: (easing: any) => easing,
+  inOut: (easing: any) => easing,
+  cubic: fallbackEasing,
+  exp: (t: number) => Math.pow(2, 10 * (t - 1))
+};
+let cancelAnimation: any = () => {};
+let runOnJS: any = (fn: any) => fn;
+
+// Load react-native-reanimated ONLY on client, using dynamic import
+if (typeof window !== 'undefined') {
+  // Use a function to ensure this is not hoisted or statically analyzed
+  (function loadReanimated() {
+    const moduleName = 'react-native-reanimated';
+    import(moduleName).then((Reanimated: any) => {
+      withTiming = Reanimated.withTiming;
+      withDelay = Reanimated.withDelay;
+      Easing = Reanimated.Easing;
+      cancelAnimation = Reanimated.cancelAnimation;
+      runOnJS = Reanimated.runOnJS;
+    }).catch(() => {
+      // Silent fail - fallbacks already set above
+    });
+  })();
+}
+
+// Re-export types with proper SharedValue typing
 export type ReanimatedCardAnimationHandle = {
   translateX: SharedValue<number>;
   translateY: SharedValue<number>;
@@ -26,6 +59,7 @@ type CardAnimationState = ReanimatedCardAnimationHandle & {
   isFaceUp: boolean;
 };
 
+// Initialize easing map - Easing is loaded above
 const getEasingMap = (): Record<EasingName, EasingFn> => {
   return {
     linear: Easing.linear,

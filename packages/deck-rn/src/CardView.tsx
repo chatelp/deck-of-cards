@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { CardViewProps } from './types';
 import { ReanimatedDriver } from './drivers/ReanimatedDriver.native';
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable as any) as any;
 
 export const CARD_WIDTH = 160;
 export const CARD_HEIGHT = 240;
