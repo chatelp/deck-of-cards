@@ -46,6 +46,19 @@ export const CardView: React.FC<CardViewProps> = ({
   const rotateY = useSharedValue(state.faceUp ? 180 : 0);
   const zIndex = useSharedValue(layout.zIndex);
 
+  // Convert interaction states to SharedValues to avoid capturing React state in worklets
+  // This prevents 'global is not defined' errors and stale closures
+  const isSelectedSV = useSharedValue(isSelected ? 1 : 0);
+  const isInteractingSV = useSharedValue(isInteracting ? 1 : 0);
+
+  useEffect(() => {
+    isSelectedSV.value = isSelected ? 1 : 0;
+  }, [isSelected, isSelectedSV]);
+
+  useEffect(() => {
+    isInteractingSV.value = isInteracting ? 1 : 0;
+  }, [isInteracting, isInteractingSV]);
+
   // Register/Unregister with driver
   useEffect(() => {
     if (!driver) return;
@@ -80,7 +93,7 @@ export const CardView: React.FC<CardViewProps> = ({
         { scale: scale.value },
         { rotateY: `${rotateY.value}deg` } // 3D rotation for flip
       ],
-      zIndex: zIndex.value + (isSelected ? 1000 : 0) + (isInteracting ? 2000 : 0),
+      zIndex: zIndex.value + (isSelectedSV.value ? 1000 : 0) + (isInteractingSV.value ? 2000 : 0),
       // Ensure visibility
       opacity: 1,
     };
