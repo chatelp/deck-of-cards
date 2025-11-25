@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import nextDynamic from 'next/dynamic';
 import { CardData, CardState, DeckState } from '@deck/core';
@@ -191,7 +191,7 @@ function shuffleWithSeed<T>(source: T[], seed: number): T[] {
   return result;
 }
 
-export default function Page() {
+function PageContent() {
   const searchParams = useSearchParams();
   const baselineMode = searchParams?.get('baseline') === '1';
   const animationParam = searchParams?.get('animation');
@@ -620,5 +620,13 @@ export default function Page() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="page-loading">Loading deck...</div>}>
+      <PageContent />
+    </Suspense>
   );
 }
