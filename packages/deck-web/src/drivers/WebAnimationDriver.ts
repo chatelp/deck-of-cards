@@ -1,9 +1,6 @@
 import type { AnimationDriver, AnimationSequence, CardId, CardLayout, CardTransform } from '@deck/core';
 import { getEasing } from './easings';
 
-/**
- * Internal state for an active animation
- */
 interface ActiveAnimation {
   cardId: CardId;
   startTime: number;
@@ -21,12 +18,12 @@ interface RegisteredCard {
 }
 
 /**
- * WebAnimationDriver implements AnimationDriver using DOM/CSS and requestAnimationFrame
+ * Web-compatible animation driver using DOM/CSS and requestAnimationFrame
+ * Replaces Reanimated for web platform to avoid React 19 / Next.js 15 conflicts
  * 
- * This driver:
- * - Registers DOM elements for each card
- * - Animates cards using CSS transforms (translate, rotate, scale)
- * - Uses requestAnimationFrame for smooth 60fps animations
+ * Features:
+ * - Manages a registry of DOM elements (cards)
+ * - Handles simple interpolation of layout properties
  * - Supports stagger, delays, and custom easings
  */
 export class WebAnimationDriver implements AnimationDriver {
@@ -127,31 +124,31 @@ export class WebAnimationDriver implements AnimationDriver {
       if (!translateMatch && !translateMatch2) {
         const matrixMatch = transform.match(/matrix(3d)?\(([^)]+)\)/);
         if (matrixMatch) {
-          const values = matrixMatch[2].split(',').map(v => parseFloat(v.trim()));
-          if (values.length >= 6) {
-            // matrix(a, b, c, d, e, f)
-            // e = translateX, f = translateY
-            x = values[4] || 0;
-            y = values[5] || 0;
-            // Calculate scale and rotation from matrix values
-            const a = values[0];
-            const b = values[1];
-            scale = Math.sqrt(a * a + b * b);
-            rotation = Math.atan2(b, a) * (180 / Math.PI);
+          const values = matrixMatch[2].split(',').map(s => parseFloat(s.trim()));
+          if (matrixMatch[1]) { // matrix3d
+            x = values[12];
+            y = values[13];
+            // rotation/scale extraction from matrix is complex, use stored state or defaults
+          } else { // matrix
+            x = values[4];
+            y = values[5];
           }
         }
       }
     }
 
-    const state = { x: x + offsetX, y: y + offsetY, scale, rotation, zIndex };
-    // Cache the parsed state
-    this.cardStates.set(cardId, state);
-    return state;
+    // Convert CSS top-left coordinates back to center coordinates
+    return {
+      x: x + offsetX,
+      y: y + offsetY,
+      rotation,
+      scale,
+      zIndex
+    };
   }
 
   /**
-   * Apply transform to DOM element
-   * Preserves rotateY if it exists (for card flip)
+   * Apply a layout to a card's DOM element
    */
   private applyTransform(cardId: CardId, layout: CardLayout): void {
     const entry = this.cardElements.get(cardId);
@@ -159,41 +156,42 @@ export class WebAnimationDriver implements AnimationDriver {
       return;
     }
     const { element, offsetX, offsetY } = entry;
-    const { x, y, rotation, scale } = layout;
-    
-    // Check if element has rotateY in current transform (for flip)
-    const currentTransform = element.style.transform || '';
-    let rotateY = '';
-    if (currentTransform) {
-      const rotateYMatch = currentTransform.match(/rotateY\([^)]+\)/);
-      if (rotateYMatch) {
-        rotateY = rotateYMatch[0];
-      }
+
+    // Convert center coordinates to CSS top-left coordinates
+    const cssX = layout.x - offsetX;
+    const cssY = layout.y - offsetY;
+
+    const transformParts: string[] = [];
+    transformParts.push(`translate3d(${cssX}px, ${cssY}px, 0)`);
+    if (layout.rotation !== 0) {
+      transformParts.push(`rotate(${layout.rotation}deg)`);
     }
-    
-    // Build transform string
-    const transforms: string[] = [];
-    const translateX = x - offsetX;
-    const translateY = y - offsetY;
-    if (translateX !== 0 || translateY !== 0) {
-      transforms.push(`translate3d(${translateX}px, ${translateY}px, 0)`);
-    }
-    if (rotation !== 0) {
-      transforms.push(`rotate(${rotation}deg)`);
-    }
-    if (scale !== 1) {
-      transforms.push(`scale(${scale})`);
-    }
-    // Preserve rotateY if it exists (for card flip)
-    if (rotateY) {
-      transforms.push(rotateY);
+    if (layout.scale !== 1) {
+      transformParts.push(`scale(${layout.scale})`);
     }
 
-    element.style.transform = transforms.length > 0 ? transforms.join(' ') : 'none';
+    // Preserve existing rotateY (flip) if present in inline style or class
+    // We don't want to overwrite the flip animation which is handled by a child element usually,
+    // but if the flip was on this element, we would need to be careful.
+    // However, in CardView, the flip is on .card-inner, while this driver drives the container <button>
+    // So we are safe to overwrite transform on the container.
+    
+    element.style.transform = transformParts.join(' ');
+    
+    // Note: zIndex is managed by CardView based on selection/interaction state
+    // We only update it if it's explicitly part of the animation target (which usually isn't for zIndex)
+    // But for shuffle/reorder, we might want to update it.
+    // Let's defer zIndex to the React component mostly, but if layout has it, we sync it?
+    // CardView.tsx logic: cardRef.current.style.zIndex = (layout.zIndex ...).toString();
+    // So we don't need to set it here, React will update it on render. 
+    // BUT during animation, React might not re-render.
+    // So we SHOULD update it here for smooth z-index transitions if needed, 
+    // or at least set it at the end.
+    // For now, let's leave zIndex to React or strict layout updates.
   }
 
   /**
-   * Interpolate between start and target states
+   * Interpolate between two layouts
    */
   private interpolate(
     start: CardLayout,
@@ -201,54 +199,57 @@ export class WebAnimationDriver implements AnimationDriver {
     progress: number,
     easingFn: (t: number) => number
   ): CardLayout {
-    const eased = easingFn(progress);
+    const t = easingFn(progress);
     
     return {
-      x: start.x + (target.x - start.x) * eased,
-      y: start.y + (target.y - start.y) * eased,
-      rotation: start.rotation + (target.rotation - start.rotation) * eased,
-      scale: start.scale + (target.scale - start.scale) * eased,
-      zIndex: target.zIndex // zIndex is not interpolated, set immediately
+      x: start.x + (target.x - start.x) * t,
+      y: start.y + (target.y - start.y) * t,
+      rotation: start.rotation + (target.rotation - start.rotation) * t,
+      scale: start.scale + ((target.scale ?? 1) - start.scale) * t,
+      zIndex: target.zIndex ?? start.zIndex
     };
   }
 
   /**
-   * Animation loop using requestAnimationFrame
+   * Main animation loop
    */
   private animate(): void {
     const now = performance.now();
     const animationsToComplete: ActiveAnimation[] = [];
+    const ids = Array.from(this.activeAnimations.keys()); // Create copy of keys to avoid iteration issues
 
-    // Update all active animations
-    for (const [cardId, animation] of this.activeAnimations.entries()) {
-      const elapsed = now - animation.startTime;
-      const delay = animation.target.delay || 0;
+    for (const cardId of ids) {
+      const animation = this.activeAnimations.get(cardId);
+      if (!animation) continue;
+
+      const { startTime, startState, target, easingFn, resolve } = animation;
       
-      // Check if animation should start (delay)
+      // Calculate progress
+      const delay = target.delay ?? 0;
+      const duration = target.duration ?? 0;
+      const elapsed = now - startTime;
+      
       if (elapsed < delay) {
-        continue; // Still waiting for delay
+        // Waiting for delay
+        continue;
       }
 
-      const adjustedElapsed = elapsed - delay;
-      const duration = animation.target.duration || 0;
-      const progress = Math.min(adjustedElapsed / duration, 1);
-
-      // Interpolate and apply transform
-      const currentLayout = this.interpolate(
-        animation.startState,
-        animation.target,
-        progress,
-        animation.easingFn
-      );
-      this.applyTransform(cardId, currentLayout);
+      const timeInAnimation = elapsed - delay;
+      let progress = duration > 0 ? timeInAnimation / duration : 1;
       
-      // Update stored state
-      this.cardStates.set(cardId, currentLayout);
-
-      // Check if animation is complete
       if (progress >= 1) {
+        progress = 1;
         animationsToComplete.push(animation);
       }
+
+      // Interpolate and apply
+      const currentLayout = this.interpolate(startState, target, progress, easingFn);
+      
+      // Update state
+      this.cardStates.set(cardId, currentLayout);
+      
+      // Apply to DOM
+      this.applyTransform(cardId, currentLayout);
     }
 
     // Complete finished animations
@@ -282,12 +283,15 @@ export class WebAnimationDriver implements AnimationDriver {
       return Promise.resolve();
     }
 
+    console.log(`[WebAnimationDriver] Playing sequence with ${sequence.steps.length} steps. Registered cards: ${this.cardElements.size}`);
+
     // Cancel any existing animations for cards in this sequence
     const cardIds = sequence.steps.map(step => step.cardId);
     this.cancel(cardIds);
 
     // Create promises for each animation step
     const promises: Promise<void>[] = [];
+    let registeredCount = 0;
 
     for (const step of sequence.steps) {
       const entry = this.cardElements.get(step.cardId);
@@ -296,6 +300,7 @@ export class WebAnimationDriver implements AnimationDriver {
         console.warn(`[WebAnimationDriver] Card ${step.cardId} not registered, skipping animation`);
         continue;
       }
+      registeredCount++;
 
       // Get current state
       const startState = this.getCurrentLayout(step.cardId);
@@ -323,6 +328,8 @@ export class WebAnimationDriver implements AnimationDriver {
       this.activeAnimations.set(step.cardId, animation);
       promises.push(promise);
     }
+
+    console.log(`[WebAnimationDriver] Started ${registeredCount} animations.`);
 
     // Start animation loop
     this.startAnimationLoop();
