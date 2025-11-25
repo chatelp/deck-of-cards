@@ -25,14 +25,14 @@ describe('Deck Sizes - Mobile', () => {
     it(`deck size ${size} - fan layout`, async () => {
       await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
       try {
-        await element(by.id(`option-${size}`)).tap();
+      await element(by.id(`option-${size}`)).tap();
       } catch (e) {
         await element(by.text(`${size}`)).atIndex(0).tap();
       }
       await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
-        await element(by.id('Fan')).tap();
+      await element(by.id('Fan')).tap();
       } catch (e) {
         await element(by.text('Fan')).tap();
       }
@@ -48,14 +48,14 @@ describe('Deck Sizes - Mobile', () => {
     it(`deck size ${size} - ring layout`, async () => {
       await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
       try {
-        await element(by.id(`option-${size}`)).tap();
+      await element(by.id(`option-${size}`)).tap();
       } catch (e) {
         await element(by.text(`${size}`)).atIndex(0).tap();
       }
       await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
-        await element(by.id('Ring')).tap();
+      await element(by.id('Ring')).tap();
       } catch (e) {
         await element(by.text('Ring')).tap();
       }
@@ -71,14 +71,14 @@ describe('Deck Sizes - Mobile', () => {
     it(`deck size ${size} - stack layout`, async () => {
       await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
       try {
-        await element(by.id(`option-${size}`)).tap();
+      await element(by.id(`option-${size}`)).tap();
       } catch (e) {
         await element(by.text(`${size}`)).atIndex(0).tap();
       }
       await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
-        await element(by.id('Stack')).tap();
+      await element(by.id('Stack')).tap();
       } catch (e) {
         await element(by.text('Stack')).tap();
       }

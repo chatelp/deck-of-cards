@@ -21,7 +21,7 @@ describe('Shuffle Animation - Mobile', () => {
     // Mettre en fan d'abord
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }
@@ -32,7 +32,7 @@ describe('Shuffle Animation - Mobile', () => {
     
     // Shuffle
     try {
-      await element(by.id('Shuffle')).tap();
+    await element(by.id('Shuffle')).tap();
     } catch (e) {
       await element(by.text('Shuffle')).tap();
     }
@@ -41,21 +41,21 @@ describe('Shuffle Animation - Mobile', () => {
     // Remonter pour voir les cartes avant le screenshot
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     await device.takeScreenshot('shuffle-from-fan-mobile.png');
   });
 
   it('shuffle - from ring layout', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Ring')).tap();
+    await element(by.id('Ring')).tap();
     } catch (e) {
       await element(by.text('Ring')).tap();
     }
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     try {
-      await element(by.id('Shuffle')).tap();
+    await element(by.id('Shuffle')).tap();
     } catch (e) {
       await element(by.text('Shuffle')).tap();
     }
@@ -64,14 +64,14 @@ describe('Shuffle Animation - Mobile', () => {
     // Remonter pour voir les cartes avant le screenshot
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     await device.takeScreenshot('shuffle-from-ring-mobile.png');
   });
 
   it('shuffle - without restore layout', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }
@@ -81,7 +81,7 @@ describe('Shuffle Animation - Mobile', () => {
     // Note: Adapter selon l'interface mobile
     
     try {
-      await element(by.id('Shuffle')).tap();
+    await element(by.id('Shuffle')).tap();
     } catch (e) {
       await element(by.text('Shuffle')).tap();
     }
@@ -90,7 +90,7 @@ describe('Shuffle Animation - Mobile', () => {
     // Remonter pour voir les cartes avant le screenshot
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     await device.takeScreenshot('shuffle-no-restore-mobile.png');
   });
 });

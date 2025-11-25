@@ -16,7 +16,7 @@ test.describe('Fan Layout', () => {
   test('fan layout - default deck size', async ({ page }) => {
     await page.click('button:has-text("Fan")');
     await page.waitForTimeout(1000);
-
+    
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
@@ -36,10 +36,10 @@ test.describe('Fan Layout', () => {
   test('fan layout - small deck (5 cards)', async ({ page }) => {
     await page.selectOption('.deck-size-picker select', '5');
     await page.waitForTimeout(500);
-
+    
     await page.click('button:has-text("Fan")');
     await page.waitForTimeout(1000);
-
+    
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
@@ -59,10 +59,10 @@ test.describe('Fan Layout', () => {
   test('fan layout - large deck (24 cards)', async ({ page }) => {
     await page.selectOption('.deck-size-picker select', '24');
     await page.waitForTimeout(500);
-
+    
     await page.click('button:has-text("Fan")');
     await page.waitForTimeout(1000);
-
+    
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );

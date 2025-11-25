@@ -20,7 +20,7 @@ describe('Stack Layout - Mobile', () => {
   it('stack layout - default deck size', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Stack')).tap();
+    await element(by.id('Stack')).tap();
     } catch (e) {
       await element(by.text('Stack')).tap();
     }
@@ -29,21 +29,21 @@ describe('Stack Layout - Mobile', () => {
     // Remonter pour voir les cartes avant le screenshot
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     await device.takeScreenshot('stack-default-mobile.png');
   });
 
   it('stack layout - small deck (5 cards)', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('option-5')).tap();
+    await element(by.id('option-5')).tap();
     } catch (e) {
       await element(by.text('5')).atIndex(0).tap();
     }
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
-      await element(by.id('Stack')).tap();
+    await element(by.id('Stack')).tap();
     } catch (e) {
       await element(by.text('Stack')).tap();
     }
@@ -52,7 +52,7 @@ describe('Stack Layout - Mobile', () => {
     // Remonter pour voir les cartes avant le screenshot
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('top');
     await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     await device.takeScreenshot('stack-5-cards-mobile.png');
   });
 
@@ -66,7 +66,7 @@ describe('Stack Layout - Mobile', () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
-      await element(by.id('Stack')).tap();
+    await element(by.id('Stack')).tap();
     } catch (e) {
       await element(by.text('Stack')).tap();
     }

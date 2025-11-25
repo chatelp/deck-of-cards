@@ -23,7 +23,7 @@ describe('Fan Layout - Mobile', () => {
     // Cliquer sur le bouton Fan
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }
@@ -43,7 +43,7 @@ describe('Fan Layout - Mobile', () => {
     // Sélectionner la taille 5 via testID
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('option-5')).tap();
+    await element(by.id('option-5')).tap();
     } catch (e) {
       // Fallback: "5" est ambigu (Deck Size vs Draw Limit), on prend le premier
       await element(by.text('5')).atIndex(0).tap();
@@ -52,7 +52,7 @@ describe('Fan Layout - Mobile', () => {
     
     // Cliquer sur Fan
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }
@@ -75,7 +75,7 @@ describe('Fan Layout - Mobile', () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }

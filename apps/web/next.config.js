@@ -8,22 +8,14 @@ module.exports = {
     '@deck/core',
     '@deck/web',
     '@deck/rn',
-    'react-native-reanimated',
-    'react-native-web',
-    'moti'
+    'react-native-web'
   ],
   webpack: (config, { isServer }) => {
-    // Alias react-native to our local shim (important: doit être avant autres règles)
+    // Alias react-native to react-native-web
     const existingAlias = config.resolve.alias || {};
     config.resolve.alias = {
       ...existingAlias,
-      'react-native$': path.resolve(rootDir, 'packages/deck-web/src/react-native-shim.js'),
-      
-      // Use web version of reanimated for web builds (client-side only)
-      // Server-side peut utiliser la version normale
-      'react-native-reanimated': isServer 
-        ? 'react-native-reanimated' 
-        : 'react-native-reanimated'
+      'react-native$': 'react-native-web'
     };
 
     // Extensions for web compatibility
@@ -63,35 +55,14 @@ module.exports = {
       }
     });
 
-    // Ignorer complètement react-native et rediriger vers react-native-web
-    config.plugins = config.plugins || [];
-    
-    // SSR-safe: Ignorer react-native-reanimated côté serveur
-    if (isServer) {
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^react-native-reanimated$/
-        })
-      );
-    }
-    
     // Ignorer complètement les imports internes de react-native (Libraries, etc.)
     // Cela empêche d'entrer dans le code source Flow de react-native qui fait planter le build web
+    config.plugins = config.plugins || [];
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^react-native\//
       })
     );
-    
-    // Client-side: Utiliser react-native-reanimated directement (la version 4 supporte le web nativement)
-    // if (!isServer) {
-    //   config.plugins.push(
-    //     new webpack.NormalModuleReplacementPlugin(
-    //       /^react-native-reanimated$/,
-    //       'react-native-reanimated'
-    //     )
-    //   );
-    // }
     
     // Définir une variable d'environnement pour forcer la plateforme web
     config.plugins.push(

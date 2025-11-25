@@ -62,39 +62,37 @@ export function shuffle(deck: DeckState, options: ShuffleOptions = {}): { deck: 
   const originalLayout = deck.layoutMode;
   const normalizedOriginalLayout = originalLayout === 'none' ? 'stack' : originalLayout;
   const cards = shuffleArray(deck.cards, options.seed, options.iterations);
-  const stackLayouts = computeStackLayout({ ...deck, cards });
-
+  
+  // Instead of going to stack, we go directly to the target layout with the new order
   const shouldRestore = options.restoreLayout ?? true;
   const targetLayout: DeckLayoutMode = shouldRestore
     ? options.restoreLayoutMode ?? normalizedOriginalLayout
     : 'stack';
 
+  // Calculate layouts for the new card order
   const finalLayouts = targetLayout === 'fan'
     ? computeFanLayout({ ...deck, cards })
     : targetLayout === 'ring'
       ? computeRingLayout({ ...deck, cards })
-      : stackLayouts;
+      : computeStackLayout({ ...deck, cards });
 
+  // Create animation sequence that moves cards directly to their new positions
   const sequence: AnimationSequence = {
     steps: cards.map((card, index) => {
-      const stackTarget = stackLayouts[card.id];
       const finalTarget = finalLayouts[card.id];
-      const delayMs = index * 20;
-
-      const restoringToOriginalLayout = shouldRestore && targetLayout !== 'stack';
-      const animationTarget = restoringToOriginalLayout ? finalTarget : stackTarget;
-
-      const duration = restoringToOriginalLayout ? 800 : 500;
-      const easing = restoringToOriginalLayout ? 'easeInOut' : 'spring';
-
+      
+      // Add some randomness or staggering based on index to make it look like a shuffle
+      // But keep it simple: move to new position directly
+      const delayMs = index * 15;
+      
       const target: CardTransform = {
-        x: animationTarget.x,
-        y: animationTarget.y,
-        rotation: animationTarget.rotation,
-        scale: animationTarget.scale,
+        x: finalTarget.x,
+        y: finalTarget.y,
+        rotation: finalTarget.rotation,
+        scale: finalTarget.scale,
         zIndex: finalTarget.zIndex,
-        duration,
-        easing,
+        duration: 500,
+        easing: 'easeInOut', // Smooth movement
         delay: delayMs
       };
 

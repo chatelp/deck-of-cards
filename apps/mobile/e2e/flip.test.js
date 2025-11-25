@@ -21,7 +21,7 @@ describe('Flip Animation - Mobile', () => {
     // Mettre en fan
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Fan')).tap();
+    await element(by.id('Fan')).tap();
     } catch (e) {
       await element(by.text('Fan')).tap();
     }
@@ -41,7 +41,7 @@ describe('Flip Animation - Mobile', () => {
   it('flip multiple cards - from ring layout', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Ring')).tap();
+    await element(by.id('Ring')).tap();
     } catch (e) {
       await element(by.text('Ring')).tap();
     }
@@ -71,7 +71,7 @@ describe('Flip Animation - Mobile', () => {
   it('flip card - from stack layout', async () => {
     await element(by.type('UIScrollView')).atIndex(0).scrollTo('bottom');
     try {
-      await element(by.id('Stack')).tap();
+    await element(by.id('Stack')).tap();
     } catch (e) {
       await element(by.text('Stack')).tap();
     }

@@ -159,7 +159,7 @@ test.describe('Flip Animation', () => {
       }
       await page.waitForTimeout(300);
     }
-
+    
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );
@@ -227,7 +227,7 @@ test.describe('Flip Animation', () => {
       }
     }
     await page.waitForTimeout(1000);
-
+    
     await page.waitForFunction(() =>
       Array.from(document.images).every((img) => img.complete && img.naturalWidth > 0)
     );

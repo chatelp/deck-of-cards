@@ -11,7 +11,7 @@ import {
 } from '@deck/core';
 import { CardView, CARD_HEIGHT, CARD_WIDTH } from './CardView';
 import { CardAnimationTarget, CardRenderProps, DeckViewProps } from './types';
-import { ReanimatedDriver } from './drivers/ReanimatedDriver.web';
+import { WebAnimationDriver } from './drivers/WebAnimationDriver';
 import { StaticDriver } from './drivers/StaticDriver';
 
 const BOUNDARY_PADDING = 24;
@@ -40,7 +40,7 @@ export const DeckView: React.FC<DeckViewProps> = ({
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const animationDriver: AnimationDriver = useMemo(
-    () => driver ?? (disableAnimations ? new StaticDriver() : new ReanimatedDriver()),
+    () => driver ?? (disableAnimations ? new StaticDriver() : new WebAnimationDriver()),
     [driver, disableAnimations]
   );
   const deckHook = useDeck(cards, animationDriver, { drawLimit, defaultBackAsset, ringRadius });
@@ -385,7 +385,7 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
             display: 'block',
           opacity: isLoaded ? 1 : 0.999, // keep deterministic value even before load
           transition: 'none'
-        }}
+          }}
         />
       ) : (
         <div
@@ -406,28 +406,28 @@ const CardBackArtwork: React.FC<CardBackArtworkProps> = ({ asset, label, fallbac
       )}
       {!baselineMode && (
         <>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.5) 100%)',
-              mixBlendMode: 'multiply',
-              pointerEvents: 'none',
-              opacity: isLoaded ? 1 : 0,
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.22) 60%, rgba(0,0,0,0.5) 100%)',
+          mixBlendMode: 'multiply',
+          pointerEvents: 'none',
+          opacity: isLoaded ? 1 : 0,
               transition: 'none' // Phase 0: disable transition for deterministic snapshots
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'radial-gradient(circle at 42% 25%, rgba(255,255,255,0.18), transparent 58%)',
-              mixBlendMode: 'soft-light',
-              pointerEvents: 'none',
-              opacity: isLoaded ? 1 : 0,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 42% 25%, rgba(255,255,255,0.18), transparent 58%)',
+          mixBlendMode: 'soft-light',
+          pointerEvents: 'none',
+          opacity: isLoaded ? 1 : 0,
               transition: 'none' // Phase 0: disable transition for deterministic snapshots
-            }}
-          />
+        }}
+      />
         </>
       )}
     </div>
