@@ -45,7 +45,10 @@ export const CardView: React.FC<CardViewProps> = ({
   };
 
   useEffect(() => {
-    if (driver instanceof ReanimatedDriver) {
+    // If driver is managing animations, we usually skip manual updates.
+    // EXCEPT during resizing (isResizing=true), where we want to snap cards 
+    // to their new layout positions instantly to avoid visual glitches.
+    if (driver instanceof ReanimatedDriver && !isResizing) {
       return;
     }
     
